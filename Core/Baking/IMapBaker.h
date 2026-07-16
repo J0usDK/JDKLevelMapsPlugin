@@ -1,0 +1,29 @@
+#pragma once
+#include <vector>
+#include "../Formats/LayerMapHeader.h"
+
+
+namespace JDKLevelMaps
+{
+	struct SBakeContext;
+
+	struct SDebugColor
+	{
+		uint8 r, g, b;
+	};
+
+	class IMapBaker
+	{
+	public:
+		virtual ~IMapBaker() = default;
+
+		// Returns the baker's identificator
+		virtual const char* GetId() const = 0;
+		virtual ELayerMapType GetMapType() const = 0;
+
+		virtual std::vector<uint8> Bake(const SBakeContext& context) = 0;
+
+		// Returns color of the map's cell
+		virtual SDebugColor GetDebugColor(uint8 value) const = 0;
+	};
+}

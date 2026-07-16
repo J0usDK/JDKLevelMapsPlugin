@@ -4,9 +4,16 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
+#include <Cry3DEngine/I3DEngine.h>
+
+#include "../Core/Baking/BakeManager.h"
+#include "../Core/Baking/BakeRunResult.h"
+#include "../Core/Formats/LayerMapHeader.h"
+
 CJDKLevelMapsEditor::CJDKLevelMapsEditor(QWidget* pParent) : CDockableEditor(pParent)
 {
 	m_pRootWidget = new QWidget();
+	m_pBakeManager = std::make_unique<JDKLevelMaps::CBakeManager>();
 
 	SetupWidget(m_pRootWidget);
 	SetContent(m_pRootWidget);
@@ -24,7 +31,11 @@ void CJDKLevelMapsEditor::SetupWidget(QWidget* pWidget)
 
 void CJDKLevelMapsEditor::OnGenerateButtonClicked()
 {
-	CryLogAlways("[JDKLevelMaps] Generate button clicked");
+	const JDKLevelMaps::SBakeRunResult result = m_pBakeManager.get()->RunBake(JDKLevelMaps::ELayerMapType::VegetationDensity, 2.0f);
+	CryLogAlways(result.success ?
+		"[JDKLevelMaps] Vegetation Level Map has been baked successfully" :
+		"[JDKLevelMaps] Vegetation Level Map baking failed with error: %s",
+		result.message.c_str());
 }
 
 const char* CJDKLevelMapsEditor::GetEditorName() const { return "JDK Level Maps"; }

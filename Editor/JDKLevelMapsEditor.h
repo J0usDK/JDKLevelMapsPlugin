@@ -1,6 +1,11 @@
 #pragma once
 #include <EditorFramework/Editor.h>
 
+namespace JDKLevelMaps
+{
+	class CBakeManager;
+}
+
 class CJDKLevelMapsEditor final : public CDockableEditor
 {
 public:
@@ -17,4 +22,6 @@ private:
 private:
 	QWidget* m_pRootWidget = nullptr;
 	QPushButton* m_pGenerateButton = nullptr;
+
+	std::unique_ptr<JDKLevelMaps::CBakeManager> m_pBakeManager;
 };
