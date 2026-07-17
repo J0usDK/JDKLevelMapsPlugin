@@ -1,6 +1,8 @@
 #pragma once
 #include <EditorFramework/Editor.h>
 
+class QPushButton;
+
 namespace JDKLevelMaps
 {
 	class CBakeManager;

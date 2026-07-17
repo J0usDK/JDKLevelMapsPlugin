@@ -1,11 +1,8 @@
 #include "StdAfx.h"
 #include "VegetationBaker.h"
 
-#include <Cry3DEngine/I3DEngine.h>
-#include <Cry3DEngine/IRenderNode.h>
-#include <Cry3DEngine/ISurfaceType.h>
-
 #include "../LevelBakeContext.h"
+#include "EditorVegetationSource.h"
 
 namespace
 {
@@ -17,24 +14,14 @@ std::vector<uint8> MapBakers::CVegetationBaker::Bake(const JDKLevelMaps::SBakeCo
 	const int32 totalCells = context.gridWidth * context.gridHeight;
 	std::vector<uint8> mapData(totalCells, 0);
 
-	AABB bakeBox;
-	bakeBox.min = Vec3(context.originX, context.originY, -8000.0f);
-	bakeBox.max = Vec3(context.originX + (context.gridWidth * context.cellSize), context.originY + (context.gridHeight * context.cellSize), 8000.0f);
+	auto objects = JDKLevelMaps::JDKEditorSource::QueryVegetationInstances(
+		context.originX, context.originY,
+		context.originX + (context.gridWidth * context.cellSize),
+		context.originY + (context.gridHeight * context.cellSize));
 
-	uint32 objectsCount = gEnv->p3DEngine->GetObjectsByTypeInBox(eERType_Vegetation, bakeBox, nullptr);
-	if (objectsCount == 0)
-		return mapData;
-
-	std::vector<IRenderNode*> objects(objectsCount);
-	gEnv->p3DEngine->GetObjectsByTypeInBox(eERType_Vegetation, bakeBox, objects.data());
-
-	for (auto pObject : objects)
+	for (auto object : objects)
 	{
-		for (int i = 0; i < pObject->GetMaterial()->GetSubMtlCount(); ++i)
-			CryLogAlways(pObject->GetMaterial()->GetSubMtl(i)->GetSurfaceType()->GetName());
-		CryLogAlways("========================================");
-
-		Vec3 pos = pObject->GetPos();
+		Vec3 pos = object.pos;
 		int32 gridX = static_cast<int32>((pos.x - context.originX) / context.cellSize);
 		int32 gridY = static_cast<int32>((pos.y - context.originY) / context.cellSize);
 
@@ -45,7 +32,7 @@ std::vector<uint8> MapBakers::CVegetationBaker::Bake(const JDKLevelMaps::SBakeCo
 
 		mapData[index] = static_cast<uint8>(std::min(mapData[index] + kDensityPerInstance, 255));
 	}
-	
+
 	return mapData;
 }
 
