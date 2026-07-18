@@ -9,10 +9,11 @@ namespace
 	constexpr uint8 kDensityPerInstance = 20;
 }
 
-std::vector<uint8> MapBakers::CVegetationBaker::Bake(const JDKLevelMaps::SBakeContext& context)
+std::vector<uint8> JDKLevelMaps::MapBakers::CVegetationBaker::Bake(const JDKLevelMaps::SBakeContext& context)
 {
+	const size_t numChannels = GetChannelCount();
 	const int32 totalCells = context.gridWidth * context.gridHeight;
-	std::vector<uint8> mapData(totalCells, 0);
+	std::vector<uint8> mapData(totalCells * numChannels, 0);
 
 	auto objects = JDKLevelMaps::JDKEditorSource::QueryVegetationInstances(
 		context.originX, context.originY,
@@ -21,6 +22,8 @@ std::vector<uint8> MapBakers::CVegetationBaker::Bake(const JDKLevelMaps::SBakeCo
 
 	for (auto object : objects)
 	{
+		const JDKLevelMaps::Categories::Vegetation::EVegetationCategory group = JDKLevelMaps::Categories::Vegetation::ClassifyGroup(object.group.c_str());
+
 		Vec3 pos = object.pos;
 		int32 gridX = static_cast<int32>((pos.x - context.originX) / context.cellSize);
 		int32 gridY = static_cast<int32>((pos.y - context.originY) / context.cellSize);
@@ -28,22 +31,48 @@ std::vector<uint8> MapBakers::CVegetationBaker::Bake(const JDKLevelMaps::SBakeCo
 		if (gridX < 0 || gridX >= context.gridWidth || gridY < 0 || gridY >= context.gridHeight)
 			continue;
 
-		int32 index = (gridY * context.gridWidth) + gridX;
+		int32 channelOffset = ResolveGroup(group);
+		if (channelOffset < 0)
+			continue;
 
+		int32 index = (((gridY * context.gridWidth) + gridX) * numChannels) + channelOffset;
 		mapData[index] = static_cast<uint8>(std::min(mapData[index] + kDensityPerInstance, 255));
 	}
 
 	return mapData;
 }
 
-JDKLevelMaps::SDebugColor MapBakers::CVegetationBaker::GetDebugColor(uint8 value) const
+JDKLevelMaps::SDebugColor JDKLevelMaps::MapBakers::CVegetationBaker::GetDebugColor(const uint8* pCellData) const
 {
-	if (value == 0)
-		return { 100, 100, 100 };
+	if (!pCellData)
+		return { 0, 0, 0 };
 
-	const float intensity = 50.0f + (value / 255.0f) * 205.0f;
-	return { 0, static_cast<uint8>(intensity), 0};
+	uint8 r = pCellData[0];
+	uint8 g = pCellData[1];
+	uint8 b = pCellData[2];
+
+	auto calcIntensity = [](uint8 val) -> uint8 {
+		if (val == 0) return 0;
+		return static_cast<uint8>(50.0f + (val / 255.0f) * 205.0f);
+	};
+	return { calcIntensity(r), calcIntensity(g), calcIntensity(b) };
 }
 
-const char* MapBakers::CVegetationBaker::GetId() const { return "VegetationDensity"; }
-JDKLevelMaps::ELayerMapType MapBakers::CVegetationBaker::GetMapType() const { return JDKLevelMaps::ELayerMapType::VegetationDensity; }
+int32 JDKLevelMaps::MapBakers::CVegetationBaker::ResolveGroup(JDKLevelMaps::Categories::Vegetation::EVegetationCategory group) const
+{
+	switch (group)
+	{
+		case JDKLevelMaps::Categories::Vegetation::EVegetationCategory::Tree:
+			return 0;
+		case JDKLevelMaps::Categories::Vegetation::EVegetationCategory::Grass:
+			return 1;
+		case JDKLevelMaps::Categories::Vegetation::EVegetationCategory::Bush:
+			return 2;
+		default:
+			return -1;
+	}
+}
+
+const char* JDKLevelMaps::MapBakers::CVegetationBaker::GetId() const { return "VegetationDensity"; }
+JDKLevelMaps::ELayerMapType JDKLevelMaps::MapBakers::CVegetationBaker::GetMapType() const { return JDKLevelMaps::ELayerMapType::VegetationDensity; }
+uint32 JDKLevelMaps::MapBakers::CVegetationBaker::GetChannelCount() const { return static_cast<size_t>(JDKLevelMaps::Categories::Vegetation::EVegetationCategory::Count) - 1; }

@@ -8,7 +8,8 @@
 
 bool JDKLevelMaps::ExportDebugPng(const char* filePath, const SBakeContext& header, const std::vector<uint8>& data, const IMapBaker& baker)
 {
-	const size_t expectedSize = header.gridWidth * header.gridHeight;
+	const uint32 channels = baker.GetChannelCount();
+	const size_t expectedSize = header.gridWidth * header.gridHeight * channels;
 	if (header.gridWidth <= 0 || header.gridHeight <= 0 || data.size() != expectedSize)
 		return false;
 	
@@ -17,11 +18,11 @@ bool JDKLevelMaps::ExportDebugPng(const char* filePath, const SBakeContext& head
 	for (int32 y = 0; y < header.gridHeight; ++y)
 	{
 		uchar* pLine = image.scanLine(y);
-		const uint8* pRowData = data.data() + y * header.gridWidth;
+		const uint8* pRowData = data.data() + (y * header.gridWidth * channels);
 
 		for (int32 x = 0; x < header.gridWidth; ++x)
 		{
-			const SDebugColor color = baker.GetDebugColor(pRowData[x]);
+			const SDebugColor color = baker.GetDebugColor(&pRowData[x * channels]);
 			uchar* pPixel = pLine + x * 3;
 			pPixel[0] = color.r;
 			pPixel[1] = color.g;
