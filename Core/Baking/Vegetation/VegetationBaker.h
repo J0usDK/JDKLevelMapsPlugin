@@ -2,6 +2,11 @@
 #include "../IMapBaker.h"
 #include "VegetationCategory.h"
 
+namespace JDKLevelMaps::Settings
+{
+	struct SVegetationBakerSettings;
+}
+
 namespace JDKLevelMaps::MapBakers
 {
 	struct SBakeContext;
@@ -9,6 +14,8 @@ namespace JDKLevelMaps::MapBakers
 	class CVegetationBaker final : public JDKLevelMaps::Baking::IMapBaker
 	{
 	public:
+		CVegetationBaker(const Settings::SVegetationBakerSettings* pSettings);
+
 		const char* GetId() const override;
 		JDKLevelMaps::ELayerMapType GetMapType() const override;
 		uint32 GetChannelCount() const override;
@@ -19,5 +26,8 @@ namespace JDKLevelMaps::MapBakers
 
 	private:
 		int32 ResolveGroup(JDKLevelMaps::Categories::Vegetation::EVegetationCategory group) const;
+
+	private:
+		const Settings::SVegetationBakerSettings* m_pSettings = nullptr;
 	};
 }

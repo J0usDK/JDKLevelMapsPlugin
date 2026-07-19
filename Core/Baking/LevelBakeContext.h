@@ -13,6 +13,11 @@ namespace JDKLevelMaps::Baking
 		float originY;
 	};
 
+	inline int GetLevelTerrainSize()
+	{
+		return gEnv->p3DEngine->GetTerrainSize();
+	}
+
 	inline SBakeContext ComputeLevelBakeContext(float cellSize)
 	{
 		CRY_ASSERT(cellSize > 0.0f);
@@ -24,7 +29,7 @@ namespace JDKLevelMaps::Baking
 		context.originX = 0.0f;
 		context.originY = 0.0f;
 
-		int terrainSize = gEnv->p3DEngine->GetTerrainSize();
+		int terrainSize = GetLevelTerrainSize();
 		int32 gridSize = static_cast<int32>(terrainSize / cellSize);
 		context.gridWidth = gridSize;
 		context.gridHeight = gridSize;

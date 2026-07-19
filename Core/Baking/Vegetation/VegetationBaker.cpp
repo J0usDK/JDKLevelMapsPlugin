@@ -3,10 +3,11 @@
 
 #include "../LevelBakeContext.h"
 #include "EditorVegetationSource.h"
+#include "../../../Settings/VegetationBakerSettings.h"
 
-namespace
+JDKLevelMaps::MapBakers::CVegetationBaker::CVegetationBaker(const Settings::SVegetationBakerSettings* pSettings)
 {
-	constexpr uint8 kDensityPerInstance = 20;
+	m_pSettings = pSettings;
 }
 
 std::vector<uint8> JDKLevelMaps::MapBakers::CVegetationBaker::Bake(const JDKLevelMaps::Baking::SBakeContext& context)
@@ -22,7 +23,7 @@ std::vector<uint8> JDKLevelMaps::MapBakers::CVegetationBaker::Bake(const JDKLeve
 
 	for (auto object : objects)
 	{
-		const JDKLevelMaps::Categories::Vegetation::EVegetationCategory group = JDKLevelMaps::Categories::Vegetation::ClassifyGroup(object.group.c_str());
+		const JDKLevelMaps::Categories::Vegetation::EVegetationCategory group = JDKLevelMaps::Categories::Vegetation::ClassifyGroup(object.group.c_str(), m_pSettings);
 
 		Vec3 pos = object.pos;
 		int32 gridX = static_cast<int32>((pos.x - context.originX) / context.cellSize);
@@ -36,7 +37,7 @@ std::vector<uint8> JDKLevelMaps::MapBakers::CVegetationBaker::Bake(const JDKLeve
 			continue;
 
 		int32 index = (((gridY * context.gridWidth) + gridX) * numChannels) + channelOffset;
-		mapData[index] = static_cast<uint8>(std::min(mapData[index] + kDensityPerInstance, 255));
+		mapData[index] = static_cast<uint8>(std::min(mapData[index] + m_pSettings->densityPerInstance, 255));
 	}
 
 	return mapData;
@@ -63,11 +64,11 @@ int32 JDKLevelMaps::MapBakers::CVegetationBaker::ResolveGroup(JDKLevelMaps::Cate
 	switch (group)
 	{
 		case JDKLevelMaps::Categories::Vegetation::EVegetationCategory::Tree:
-			return 0;
+			return m_pSettings->enableTree ? 0 : -1;
 		case JDKLevelMaps::Categories::Vegetation::EVegetationCategory::Grass:
-			return 1;
+			return m_pSettings->enableGrass ? 1 : -1;
 		case JDKLevelMaps::Categories::Vegetation::EVegetationCategory::Bush:
-			return 2;
+			return m_pSettings->enableBush ? 2 : -1;
 		default:
 			return -1;
 	}

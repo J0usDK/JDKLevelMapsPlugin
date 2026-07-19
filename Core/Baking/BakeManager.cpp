@@ -9,14 +9,16 @@
 #include "LevelBakeContext.h"
 #include "BakeRunResult.h"
 #include "../FileSystem/PathResolver.h"
+#include "../../Settings/BakerSettings.h"
 
-JDKLevelMaps::Baking::CBakeManager::CBakeManager(FileSystem::CPathResolver* pPathResolver)
+JDKLevelMaps::Baking::CBakeManager::CBakeManager(FileSystem::CPathResolver* pPathResolver, const Settings::SBakerSettings* pBakerSettings)
 {
 	m_pPathResolver = pPathResolver;
+	m_pBakerSettings = pBakerSettings;
 	m_pBakePipeline = std::make_unique<CBakePipeline>(pPathResolver);
 
 	m_bakers.reserve(1);
-	m_bakers.push_back(std::make_unique<MapBakers::CVegetationBaker>());
+	m_bakers.push_back(std::make_unique<MapBakers::CVegetationBaker>(&m_pBakerSettings->vegSettings));
 }
 
 JDKLevelMaps::Baking::CBakeManager::~CBakeManager() = default;
@@ -41,7 +43,7 @@ const JDKLevelMaps::Baking::IMapBaker* JDKLevelMaps::Baking::CBakeManager::GetBa
 	return it != m_bakers.end() ? it->get() : nullptr;
 }
 
-JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakeManager::RunBake(ELayerMapType mapType, float cellSize)
+JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakeManager::RunBake(ELayerMapType mapType)
 {
 	auto it = std::find_if(m_bakers.begin(), m_bakers.end(), [mapType](const auto& pBaker) {
 		return pBaker->GetMapType() == mapType;
@@ -54,6 +56,6 @@ JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakeManager::RunBake
 		return result;
 	}
 
-	SBakeContext context = JDKLevelMaps::Baking::ComputeLevelBakeContext(cellSize);
+	SBakeContext context = JDKLevelMaps::Baking::ComputeLevelBakeContext(m_pBakerSettings->cellSize);
 	return m_pBakePipeline->BakeMap(*it->get(), context);
 }

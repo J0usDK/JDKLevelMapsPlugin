@@ -7,6 +7,11 @@ namespace JDKLevelMaps
 	enum class ELayerMapType : uint16;
 }
 
+namespace JDKLevelMaps::Settings
+{
+	struct SBakerSettings;
+}
+
 namespace JDKLevelMaps::FileSystem
 {
 	class CPathResolver;
@@ -21,15 +26,16 @@ namespace JDKLevelMaps::Baking
 	class CBakeManager
 	{
 	public:
-		CBakeManager(FileSystem::CPathResolver* pPathResolver);
+		CBakeManager(FileSystem::CPathResolver* pPathResolver, const Settings::SBakerSettings* pBakerSettings);
 		~CBakeManager();
 
 		std::vector<const IMapBaker*> GetAvaliableBakers() const;
 		const IMapBaker* GetBaker(ELayerMapType bakerType) const;
 
-		SBakeRunResult RunBake(ELayerMapType mapType, float cellSize);
+		SBakeRunResult RunBake(ELayerMapType mapType);
 
 	private:
+		const Settings::SBakerSettings* m_pBakerSettings = nullptr;
 		FileSystem::CPathResolver* m_pPathResolver = nullptr;
 		std::unique_ptr<CBakePipeline> m_pBakePipeline = nullptr;
 
