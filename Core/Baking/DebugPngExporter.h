@@ -3,7 +3,7 @@
 #include <vector>
 #include <CryCore/BaseTypes.h>
 
-namespace JDKLevelMaps
+namespace JDKLevelMaps::Baking
 {
 	class IMapBaker;
 	struct SBakeContext;

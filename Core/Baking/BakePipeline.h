@@ -2,7 +2,12 @@
 #include <vector>
 #include <CryCore/BaseTypes.h>
 
-namespace JDKLevelMaps
+namespace JDKLevelMaps::FileSystem
+{
+	class CPathResolver;
+}
+
+namespace JDKLevelMaps::Baking
 {
 	class IMapBaker;
 	struct SBakeContext;
@@ -11,7 +16,10 @@ namespace JDKLevelMaps
 	class CBakePipeline
 	{
 	public:
-		SBakeRunResult BakeMap(IMapBaker& pBaker, const JDKLevelMaps::SBakeContext& context);
+		CBakePipeline(JDKLevelMaps::FileSystem::CPathResolver* pPathResolver);
+		~CBakePipeline() = default;
+
+		SBakeRunResult BakeMap(IMapBaker& pBaker, const SBakeContext& context);
 
 	private:
 		// If success contains path in the str field, otherwise the field contains error message
@@ -22,7 +30,9 @@ namespace JDKLevelMaps
 		};
 
 	private:
-		SPathResult PrepareAndGetPath(const char* filename);
-		SBakeRunResult WriteToFile(const IMapBaker& pBaker, const JDKLevelMaps::SBakeContext& context, const char* path, const std::vector<uint8>& bakedData);
+		SBakeRunResult WriteToFile(const IMapBaker& pBaker, const SBakeContext& context, const char* path, const std::vector<uint8>& bakedData);
+
+	private:
+		FileSystem::CPathResolver* m_pPathResolver = nullptr;
 	};
 }

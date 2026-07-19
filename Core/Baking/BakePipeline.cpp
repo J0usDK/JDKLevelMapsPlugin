@@ -3,39 +3,48 @@
 
 #include "IMapBaker.h"
 #include "LevelBakeContext.h"
-#include "BakeRunResult.h"
-#include "../Formats/LayerMapHeader.h"
-#include "DebugPngExporter.h"
 
-JDKLevelMaps::SBakeRunResult JDKLevelMaps::CBakePipeline::BakeMap(IMapBaker& pBaker, const JDKLevelMaps::SBakeContext& context)
+#include "BakeRunResult.h"
+#include "DebugPngExporter.h"
+#include "../FileSystem/PathResolver.h"
+
+JDKLevelMaps::Baking::CBakePipeline::CBakePipeline(FileSystem::CPathResolver* pPathResolver)
+{
+	m_pPathResolver = pPathResolver;
+}
+
+JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::BakeMap(IMapBaker& pBaker, const SBakeContext& context)
 {
 	std::vector<uint8> bakedData = pBaker.Bake(context);
+	std::string path;
 
-	SPathResult pathResult = PrepareAndGetPath((std::string(pBaker.GetId()) + ".jdkm").c_str());
-	if (!pathResult.success)
-		return { false, pathResult.str };
+	if (auto resultPath = m_pPathResolver->GetMapPath(pBaker.GetId()))
+		path = resultPath.value();
+	else
+		return SBakeRunResult(false, "Cannot get map's path");
 
-	SBakeRunResult mapResult = WriteToFile(pBaker, context, pathResult.str.c_str(), bakedData);
+	SBakeRunResult mapResult = WriteToFile(pBaker, context, path.c_str(), bakedData);
 	if (!mapResult.success)
 		return mapResult;
 
-	pathResult = PrepareAndGetPath((std::string(pBaker.GetId()) + ".png").c_str());
-	if (!pathResult.success)
-		return { false, pathResult.str };
+	if (auto resultPath = m_pPathResolver->GetImagePath(pBaker.GetId()))
+		path = resultPath.value();
+	else
+		return SBakeRunResult(false, "Cannot get image's path");
 
-	bool imageResult = JDKLevelMaps::ExportDebugPng(pathResult.str.c_str(), context, bakedData, pBaker);
+	bool imageResult = ExportDebugPng(path.c_str(), context, bakedData, pBaker);
 	return { imageResult, imageResult ? "" : "Error saving debug image" };
 }
 
-JDKLevelMaps::SBakeRunResult JDKLevelMaps::CBakePipeline::WriteToFile (
+JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::WriteToFile (
 	const IMapBaker& pBaker,
-	const JDKLevelMaps::SBakeContext& context,
+	const SBakeContext& context,
 	const char* path,
 	const std::vector<uint8>& bakedData)
 {
 	SBakeRunResult result;
 
-	JDKLevelMaps::SLayerMapHeader header;
+	SLayerMapHeader header;
 	header.mapType = pBaker.GetMapType();
 	header.gridWidth = context.gridWidth;
 	header.gridHeight = context.gridHeight;
@@ -73,21 +82,5 @@ JDKLevelMaps::SBakeRunResult JDKLevelMaps::CBakePipeline::WriteToFile (
 	result.success = true;
 	result.message = "Saved to " + std::string(path);
 	gEnv->pCryPak->FClose(pFile);
-	return result;
-}
-
-JDKLevelMaps::CBakePipeline::SPathResult JDKLevelMaps::CBakePipeline::PrepareAndGetPath(const char* filename)
-{
-	if (!filename)
-		return { false, "Missing file name" };
-
-	SPathResult result;
-
-	result.str = gEnv->p3DEngine->GetLevelFilePath("JDKLevelMaps");
-	if (!gEnv->pCryPak->MakeDir(result.str.c_str()))
-		return { false, "Cannot create output directory: " + result.str };
-
-	result.str += "/" + std::string(filename);
-	result.success = true;
 	return result;
 }

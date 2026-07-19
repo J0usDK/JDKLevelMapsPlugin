@@ -6,7 +6,7 @@
 #include "LevelBakeContext.h"
 #include "IMapBaker.h"
 
-bool JDKLevelMaps::ExportDebugPng(const char* filePath, const SBakeContext& header, const std::vector<uint8>& data, const IMapBaker& baker)
+bool JDKLevelMaps::Baking::ExportDebugPng(const char* filePath, const SBakeContext& header, const std::vector<uint8>& data, const IMapBaker& baker)
 {
 	const uint32 channels = baker.GetChannelCount();
 	const size_t expectedSize = header.gridWidth * header.gridHeight * channels;

@@ -3,7 +3,7 @@
 #include "../Formats/LayerMapHeader.h"
 
 
-namespace JDKLevelMaps
+namespace JDKLevelMaps::Baking
 {
 	struct SBakeContext;
 

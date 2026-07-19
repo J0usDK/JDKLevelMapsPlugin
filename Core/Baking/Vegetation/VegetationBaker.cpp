@@ -9,7 +9,7 @@ namespace
 	constexpr uint8 kDensityPerInstance = 20;
 }
 
-std::vector<uint8> JDKLevelMaps::MapBakers::CVegetationBaker::Bake(const JDKLevelMaps::SBakeContext& context)
+std::vector<uint8> JDKLevelMaps::MapBakers::CVegetationBaker::Bake(const JDKLevelMaps::Baking::SBakeContext& context)
 {
 	const size_t numChannels = GetChannelCount();
 	const int32 totalCells = context.gridWidth * context.gridHeight;
@@ -42,7 +42,7 @@ std::vector<uint8> JDKLevelMaps::MapBakers::CVegetationBaker::Bake(const JDKLeve
 	return mapData;
 }
 
-JDKLevelMaps::SDebugColor JDKLevelMaps::MapBakers::CVegetationBaker::GetDebugColor(const uint8* pCellData) const
+JDKLevelMaps::Baking::SDebugColor JDKLevelMaps::MapBakers::CVegetationBaker::GetDebugColor(const uint8* pCellData) const
 {
 	if (!pCellData)
 		return { 0, 0, 0 };

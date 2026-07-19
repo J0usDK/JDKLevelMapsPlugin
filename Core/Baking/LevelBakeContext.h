@@ -2,7 +2,7 @@
 #include <CryCore/BaseTypes.h>
 #include <Cry3DEngine/I3DEngine.h>
 
-namespace JDKLevelMaps
+namespace JDKLevelMaps::Baking
 {
 	struct SBakeContext
 	{

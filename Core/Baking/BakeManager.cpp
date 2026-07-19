@@ -8,19 +8,22 @@
 #include "Vegetation/VegetationBaker.h"
 #include "LevelBakeContext.h"
 #include "BakeRunResult.h"
+#include "../FileSystem/PathResolver.h"
 
-JDKLevelMaps::CBakeManager::CBakeManager()
+JDKLevelMaps::Baking::CBakeManager::CBakeManager(FileSystem::CPathResolver* pPathResolver)
 {
-	m_pBakePipeline = std::make_unique<CBakePipeline>();
+	m_pPathResolver = pPathResolver;
+	m_pBakePipeline = std::make_unique<CBakePipeline>(pPathResolver);
+
 	m_bakers.reserve(1);
 	m_bakers.push_back(std::make_unique<MapBakers::CVegetationBaker>());
 }
 
-JDKLevelMaps::CBakeManager::~CBakeManager() = default;
+JDKLevelMaps::Baking::CBakeManager::~CBakeManager() = default;
 
-std::vector<const JDKLevelMaps::IMapBaker*> JDKLevelMaps::CBakeManager::GetAvaliableBakers() const
+std::vector<const JDKLevelMaps::Baking::IMapBaker*> JDKLevelMaps::Baking::CBakeManager::GetAvaliableBakers() const
 {
-	std::vector<const JDKLevelMaps::IMapBaker*> outBakers;
+	std::vector<const IMapBaker*> outBakers;
 	outBakers.reserve(m_bakers.size());
 
 	for (const auto& pBaker : m_bakers)
@@ -29,7 +32,16 @@ std::vector<const JDKLevelMaps::IMapBaker*> JDKLevelMaps::CBakeManager::GetAvali
 	return outBakers;
 }
 
-JDKLevelMaps::SBakeRunResult JDKLevelMaps::CBakeManager::RunBake(JDKLevelMaps::ELayerMapType mapType, float cellSize)
+const JDKLevelMaps::Baking::IMapBaker* JDKLevelMaps::Baking::CBakeManager::GetBaker(ELayerMapType bakerType) const
+{
+	auto it = std::find_if(m_bakers.begin(), m_bakers.end(), [bakerType](const auto& pBaker) {
+		return pBaker->GetMapType() == bakerType;
+	});
+
+	return it != m_bakers.end() ? it->get() : nullptr;
+}
+
+JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakeManager::RunBake(ELayerMapType mapType, float cellSize)
 {
 	auto it = std::find_if(m_bakers.begin(), m_bakers.end(), [mapType](const auto& pBaker) {
 		return pBaker->GetMapType() == mapType;
@@ -42,6 +54,6 @@ JDKLevelMaps::SBakeRunResult JDKLevelMaps::CBakeManager::RunBake(JDKLevelMaps::E
 		return result;
 	}
 
-	SBakeContext context = JDKLevelMaps::ComputeLevelBakeContext(cellSize);
+	SBakeContext context = JDKLevelMaps::Baking::ComputeLevelBakeContext(cellSize);
 	return m_pBakePipeline->BakeMap(*it->get(), context);
 }
