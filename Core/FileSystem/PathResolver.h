@@ -2,13 +2,16 @@
 #include <string>
 #include <optional>
 
+#include <IEditor.h>
+
 namespace JDKLevelMaps::FileSystem
 {
 	class CPathResolver
 	{
 	public:
 		CPathResolver();
-		~CPathResolver() = default;
+
+		void RecomputePath();
 
 		const std::optional<std::string> GetImagePath(const char* bakerId) const;
 		const std::optional<std::string> GetMapPath(const char* bakerId) const;

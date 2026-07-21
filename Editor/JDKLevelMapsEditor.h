@@ -28,11 +28,13 @@ namespace JDKLevelMaps::FileSystem
 	class CPathResolver;
 }
 
-class CJDKLevelMapsEditor final : public CDockableEditor
+class CJDKLevelMapsEditor final : public CDockableEditor, public IAutoEditorNotifyListener
 {
 public:
 	CJDKLevelMapsEditor(QWidget* pParent = nullptr);
 	~CJDKLevelMapsEditor() = default;
+
+	void OnEditorNotifyEvent(EEditorNotifyEvent event) override;
 
 	const char* GetEditorName() const override;
 

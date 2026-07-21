@@ -40,6 +40,20 @@ CJDKLevelMapsEditor::CJDKLevelMapsEditor(QWidget* pParent) : CDockableEditor(pPa
 		RefreshPreview(path.value());
 }
 
+void CJDKLevelMapsEditor::OnEditorNotifyEvent(EEditorNotifyEvent event)
+{
+	if (event != eNotify_OnEndLoad)
+		return;
+
+	m_pPathResolver->RecomputePath();
+
+	auto currentBaker = m_pBakeManager->GetBaker(JDKLevelMaps::ELayerMapType::VegetationDensity);
+	if (auto path = m_pPathResolver->GetImagePath(currentBaker->GetId()))
+		RefreshPreview(path.value());
+	else
+		m_pMapPreview->setText("No preview generated yet");
+}
+
 void CJDKLevelMapsEditor::SetupWidget(QWidget* pWidget)
 {
 	m_pMapPreview = new JDKLevelMaps::Components::CMapPreview(pWidget);
@@ -139,6 +153,7 @@ void CJDKLevelMapsEditor::RefreshPreview(const std::string& imagePath)
 	const QPixmap pixmap(QString::fromStdString(imagePath));
 	if (pixmap.isNull())
 	{
+		m_pMapPreview->SetPixmap(QPixmap());
 		m_pMapPreview->setText(tr("No preview generated yet"));
 		return;
 	}

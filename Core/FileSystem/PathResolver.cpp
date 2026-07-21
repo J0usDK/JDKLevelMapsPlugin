@@ -7,12 +7,17 @@
 
 JDKLevelMaps::FileSystem::CPathResolver::CPathResolver()
 {
+	RecomputePath();
+}
+
+void JDKLevelMaps::FileSystem::CPathResolver::RecomputePath()
+{
 	m_sDefaultPath = gEnv->p3DEngine->GetLevelFilePath("JDKLevelMaps");
 
 	if (gEnv->pCryPak->MakeDir(m_sDefaultPath.c_str()))
 		m_bInitialized = true;
 	else
-		CryWarning(VALIDATOR_MODULE_EDITOR, VALIDATOR_ERROR, ("Can't create plugin directory: " + m_sDefaultPath).c_str());
+		CryWarning(VALIDATOR_MODULE_EDITOR, VALIDATOR_ERROR, ("[JDKLevelMaps] Can't create plugin directory: " + m_sDefaultPath).c_str());
 
 	m_sDefaultPath += "/";
 }

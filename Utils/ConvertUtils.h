@@ -18,7 +18,7 @@ namespace JDKLevelMaps::Utils::ConvertUtils
 		if (isOk && tempValue <= 255)
 			ret = static_cast<uint8>(tempValue);
 		else
-			CryWarning(VALIDATOR_MODULE_EDITOR, VALIDATOR_WARNING, "Cannot convert value to uint8");
+			CryWarning(VALIDATOR_MODULE_EDITOR, VALIDATOR_WARNING, "[JDKLevelMaps] Cannot convert value to uint8");
 
 		return ret;
 	}
@@ -36,7 +36,7 @@ namespace JDKLevelMaps::Utils::ConvertUtils
 		if (isOk)
 			ret = tempValue;
 		else
-			CryWarning(VALIDATOR_MODULE_EDITOR, VALIDATOR_WARNING, "Cannot convert value to float");
+			CryWarning(VALIDATOR_MODULE_EDITOR, VALIDATOR_WARNING, "[JDKLevelMaps] Cannot convert value to float");
 
 		return ret;
 	}
@@ -52,7 +52,7 @@ namespace JDKLevelMaps::Utils::ConvertUtils
 		if (!qret.isEmpty())
 			ret = qret.toStdString();
 		else
-			CryWarning(VALIDATOR_MODULE_EDITOR, VALIDATOR_WARNING, "Cannot convert value to std::string");
+			CryWarning(VALIDATOR_MODULE_EDITOR, VALIDATOR_WARNING, "[JDKLevelMaps] Cannot convert value to std::string");
 
 		return ret;
 	}
@@ -67,7 +67,7 @@ namespace JDKLevelMaps::Utils::ConvertUtils
 		if (value.type() == QMetaType::Bool)
 			ret = value.toBool();
 		else
-			CryWarning(VALIDATOR_MODULE_EDITOR, VALIDATOR_WARNING, "Cannot convert value to bool");
+			CryWarning(VALIDATOR_MODULE_EDITOR, VALIDATOR_WARNING, "[JDKLevelMaps] Cannot convert value to bool");
 
 		return ret;
 	}
