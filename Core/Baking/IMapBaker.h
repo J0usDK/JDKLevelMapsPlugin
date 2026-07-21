@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "../Formats/LayerMapHeader.h"
+#include "Shared/LayerMapHeader.h"
 
 
 namespace JDKLevelMaps::Baking

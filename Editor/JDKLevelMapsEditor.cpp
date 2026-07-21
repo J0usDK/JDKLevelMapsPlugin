@@ -17,8 +17,8 @@
 #include "../Core/Baking/BakeManager.h"
 #include "../Core/Baking/BakeRunResult.h"
 #include "../Core/Baking/LevelBakeContext.h"
-#include "../Core/Formats/LayerMapHeader.h"
 #include "../Core/FileSystem/PathResolver.h"
+#include "Shared/LayerMapHeader.h"
 
 #include "../Utils/ConvertUtils.h"
 #include "../Settings/BakerSettings.h"

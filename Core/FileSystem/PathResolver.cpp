@@ -3,7 +3,7 @@
 
 #include <Cry3DEngine/I3DEngine.h>
 
-#include "../Formats/LayerMapHeader.h"
+#include "Shared/LayerMapHeader.h"
 
 JDKLevelMaps::FileSystem::CPathResolver::CPathResolver()
 {
