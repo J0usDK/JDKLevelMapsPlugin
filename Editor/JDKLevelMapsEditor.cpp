@@ -18,7 +18,7 @@
 #include "../Core/Baking/BakeRunResult.h"
 #include "../Core/Baking/LevelBakeContext.h"
 #include "../Core/FileSystem/PathResolver.h"
-#include "Shared/LayerMapHeader.h"
+#include "Shared/MapHeader.h"
 
 #include "../Utils/ConvertUtils.h"
 #include "../Settings/BakerSettings.h"
@@ -35,7 +35,7 @@ CJDKLevelMapsEditor::CJDKLevelMapsEditor(QWidget* pParent) : CDockableEditor(pPa
 	SetupConnections();
 	SetContent(m_pRootWidget);
 
-	auto currentBaker = m_pBakeManager->GetBaker(JDKLevelMaps::ELayerMapType::VegetationDensity);
+	auto currentBaker = m_pBakeManager->GetBaker(JDKLevelMaps::EMapType::VegetationDensity);
 	if (auto path = m_pPathResolver.get()->GetImagePath(currentBaker->GetId()))
 		RefreshPreview(path.value());
 }
@@ -47,7 +47,7 @@ void CJDKLevelMapsEditor::OnEditorNotifyEvent(EEditorNotifyEvent event)
 
 	m_pPathResolver->RecomputePath();
 
-	auto currentBaker = m_pBakeManager->GetBaker(JDKLevelMaps::ELayerMapType::VegetationDensity);
+	auto currentBaker = m_pBakeManager->GetBaker(JDKLevelMaps::EMapType::VegetationDensity);
 	if (auto path = m_pPathResolver->GetImagePath(currentBaker->GetId()))
 		RefreshPreview(path.value());
 	else
@@ -163,13 +163,13 @@ void CJDKLevelMapsEditor::RefreshPreview(const std::string& imagePath)
 
 void CJDKLevelMapsEditor::OnGenerateButtonClicked()
 {
-	const JDKLevelMaps::Baking::SBakeRunResult result = m_pBakeManager.get()->RunBake(JDKLevelMaps::ELayerMapType::VegetationDensity);
+	const JDKLevelMaps::Baking::SBakeRunResult result = m_pBakeManager.get()->RunBake(JDKLevelMaps::EMapType::VegetationDensity);
 	CryLogAlways(result.success ?
 		"[JDKLevelMaps] Vegetation Level Map has been baked successfully" :
 		"[JDKLevelMaps] Vegetation Level Map baking failed with error: %s",
 		result.message.c_str());
 
-	auto currentBaker = m_pBakeManager->GetBaker(JDKLevelMaps::ELayerMapType::VegetationDensity);
+	auto currentBaker = m_pBakeManager->GetBaker(JDKLevelMaps::EMapType::VegetationDensity);
 	if (auto path = m_pPathResolver.get()->GetImagePath(currentBaker->GetId()))
 		RefreshPreview(path.value());
 }

@@ -4,7 +4,7 @@
 
 namespace JDKLevelMaps
 {
-	enum class ELayerMapType : uint16;
+	enum class EMapType : uint16;
 }
 
 namespace JDKLevelMaps::Settings
@@ -30,9 +30,9 @@ namespace JDKLevelMaps::Baking
 		~CBakeManager();
 
 		std::vector<const IMapBaker*> GetAvaliableBakers() const;
-		const IMapBaker* GetBaker(ELayerMapType bakerType) const;
+		const IMapBaker* GetBaker(EMapType bakerType) const;
 
-		SBakeRunResult RunBake(ELayerMapType mapType);
+		SBakeRunResult RunBake(EMapType mapType);
 
 	private:
 		const Settings::SBakerSettings* m_pBakerSettings = nullptr;

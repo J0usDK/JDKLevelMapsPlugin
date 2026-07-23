@@ -34,7 +34,7 @@ std::vector<const JDKLevelMaps::Baking::IMapBaker*> JDKLevelMaps::Baking::CBakeM
 	return outBakers;
 }
 
-const JDKLevelMaps::Baking::IMapBaker* JDKLevelMaps::Baking::CBakeManager::GetBaker(ELayerMapType bakerType) const
+const JDKLevelMaps::Baking::IMapBaker* JDKLevelMaps::Baking::CBakeManager::GetBaker(EMapType bakerType) const
 {
 	auto it = std::find_if(m_bakers.begin(), m_bakers.end(), [bakerType](const auto& pBaker) {
 		return pBaker->GetMapType() == bakerType;
@@ -43,7 +43,7 @@ const JDKLevelMaps::Baking::IMapBaker* JDKLevelMaps::Baking::CBakeManager::GetBa
 	return it != m_bakers.end() ? it->get() : nullptr;
 }
 
-JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakeManager::RunBake(ELayerMapType mapType)
+JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakeManager::RunBake(EMapType mapType)
 {
 	auto it = std::find_if(m_bakers.begin(), m_bakers.end(), [mapType](const auto& pBaker) {
 		return pBaker->GetMapType() == mapType;

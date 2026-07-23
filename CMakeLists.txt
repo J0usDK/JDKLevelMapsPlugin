@@ -46,7 +46,8 @@ add_sources("NoUberFile"
 
 add_sources("NoUberFile"
 	SOURCE_GROUP "Shared"
-		"Shared/LayerMapHeader.h"
+		"Shared/MapHeader.h"
+		"Shared/MapLayers.h"
 )
 
 add_sources("NoUberFile"

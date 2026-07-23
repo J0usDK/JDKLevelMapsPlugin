@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "Shared/LayerMapHeader.h"
+#include "Shared/MapHeader.h"
 
 
 namespace JDKLevelMaps::Baking
@@ -21,7 +21,7 @@ namespace JDKLevelMaps::Baking
 
 		// Returns the baker's identificator
 		virtual const char* GetId() const = 0;
-		virtual ELayerMapType GetMapType() const = 0;
+		virtual EMapType GetMapType() const = 0;
 		virtual uint32 GetChannelCount() const { return 1; }
 
 		virtual std::vector<uint8> Bake(const SBakeContext& context) = 0;

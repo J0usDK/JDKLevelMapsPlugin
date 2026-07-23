@@ -44,7 +44,7 @@ JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::WriteT
 {
 	SBakeRunResult result;
 
-	SLayerMapHeader header;
+	SMapHeader header;
 	header.mapType = pBaker.GetMapType();
 	header.gridWidth = context.gridWidth;
 	header.gridHeight = context.gridHeight;
@@ -60,7 +60,7 @@ JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::WriteT
 	}
 
 	size_t writtenSize = 0;
-	writtenSize = gEnv->pCryPak->FWrite(&header, sizeof(SLayerMapHeader), 1, pFile);
+	writtenSize = gEnv->pCryPak->FWrite(&header, sizeof(SMapHeader), 1, pFile);
 	if (writtenSize != 1)
 	{
 		result.message = "Can't write map's header";

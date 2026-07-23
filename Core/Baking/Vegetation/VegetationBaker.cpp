@@ -23,7 +23,7 @@ std::vector<uint8> JDKLevelMaps::MapBakers::CVegetationBaker::Bake(const JDKLeve
 
 	for (auto object : objects)
 	{
-		const JDKLevelMaps::Categories::Vegetation::EVegetationCategory group = JDKLevelMaps::Categories::Vegetation::ClassifyGroup(object.group.c_str(), m_pSettings);
+		const MapLayers::EVegetationLayers group = JDKLevelMaps::Categories::Vegetation::ClassifyGroup(object.group.c_str(), m_pSettings);
 
 		Vec3 pos = object.pos;
 		int32 gridX = static_cast<int32>((pos.x - context.originX) / context.cellSize);
@@ -59,21 +59,21 @@ JDKLevelMaps::Baking::SDebugColor JDKLevelMaps::MapBakers::CVegetationBaker::Get
 	return { calcIntensity(r), calcIntensity(g), calcIntensity(b) };
 }
 
-int32 JDKLevelMaps::MapBakers::CVegetationBaker::ResolveGroup(JDKLevelMaps::Categories::Vegetation::EVegetationCategory group) const
+int32 JDKLevelMaps::MapBakers::CVegetationBaker::ResolveGroup(MapLayers::EVegetationLayers group) const
 {
 	switch (group)
 	{
-		case JDKLevelMaps::Categories::Vegetation::EVegetationCategory::Tree:
-			return m_pSettings->enableTree ? 0 : -1;
-		case JDKLevelMaps::Categories::Vegetation::EVegetationCategory::Grass:
-			return m_pSettings->enableGrass ? 1 : -1;
-		case JDKLevelMaps::Categories::Vegetation::EVegetationCategory::Bush:
-			return m_pSettings->enableBush ? 2 : -1;
+		case MapLayers::EVegetationLayers::Tree:
+			return m_pSettings->enableTree ? JDKLevelMaps::MapLayers::ToChannelIndex(group) : -1;
+		case MapLayers::EVegetationLayers::Grass:
+			return m_pSettings->enableGrass ? JDKLevelMaps::MapLayers::ToChannelIndex(group) : -1;
+		case MapLayers::EVegetationLayers::Bush:
+			return m_pSettings->enableBush ? JDKLevelMaps::MapLayers::ToChannelIndex(group) : -1;
 		default:
 			return -1;
 	}
 }
 
 const char* JDKLevelMaps::MapBakers::CVegetationBaker::GetId() const { return "VegetationDensity"; }
-JDKLevelMaps::ELayerMapType JDKLevelMaps::MapBakers::CVegetationBaker::GetMapType() const { return JDKLevelMaps::ELayerMapType::VegetationDensity; }
-uint32 JDKLevelMaps::MapBakers::CVegetationBaker::GetChannelCount() const { return static_cast<size_t>(JDKLevelMaps::Categories::Vegetation::EVegetationCategory::Count) - 1; }
+JDKLevelMaps::EMapType JDKLevelMaps::MapBakers::CVegetationBaker::GetMapType() const { return JDKLevelMaps::EMapType::VegetationDensity; }
+uint32 JDKLevelMaps::MapBakers::CVegetationBaker::GetChannelCount() const { return JDKLevelMaps::MapLayers::kVegetationChannelCount; }
