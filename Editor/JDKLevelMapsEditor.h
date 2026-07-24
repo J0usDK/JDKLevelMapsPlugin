@@ -54,6 +54,7 @@ private:
 private:
 	QWidget* m_pRootWidget = nullptr;
 	QDoubleSpinBox* m_pCellSizeSpinBox = nullptr;
+	QSpinBox* m_pTileSizeSpinBox = nullptr;
 	QSpinBox* m_pSensetivitySpinBox = nullptr;
 	QCheckBox* m_pGrassCheckBox = nullptr;
 	QCheckBox* m_pBushCheckBox = nullptr;

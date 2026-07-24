@@ -56,6 +56,6 @@ JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakeManager::RunBake
 		return result;
 	}
 
-	SBakeContext context = JDKLevelMaps::Baking::ComputeLevelBakeContext(m_pBakerSettings->cellSize);
+	SBakeContext context = JDKLevelMaps::Baking::ComputeLevelBakeContext(m_pBakerSettings->cellSize, m_pBakerSettings->tileSize);
 	return m_pBakePipeline->BakeMap(*it->get(), context);
 }

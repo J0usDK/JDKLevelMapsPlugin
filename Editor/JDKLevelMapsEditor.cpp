@@ -58,6 +58,7 @@ void CJDKLevelMapsEditor::SetupWidget(QWidget* pWidget)
 {
 	m_pMapPreview = new JDKLevelMaps::Components::CMapPreview(pWidget);
 	m_pCellSizeSpinBox = new QDoubleSpinBox(pWidget);
+	m_pTileSizeSpinBox = new QSpinBox(pWidget);
 	m_pSensetivitySpinBox = new QSpinBox(pWidget);
 	m_pGrassCheckBox = new QCheckBox(pWidget);
 	m_pBushCheckBox = new QCheckBox(pWidget);
@@ -67,12 +68,18 @@ void CJDKLevelMapsEditor::SetupWidget(QWidget* pWidget)
 	m_pTreeLineEdit = new QLineEdit(pWidget);
 	m_pGenerateButton = new QPushButton(tr("Generate"), pWidget);
 
-	m_pCellSizeSpinBox->setDecimals(2);
-	m_pCellSizeSpinBox->setSingleStep(0.5);
 	const int terrainSize = JDKLevelMaps::Baking::GetLevelTerrainSize();
 	const double maxCellSize = terrainSize > 0 ? static_cast<double>(terrainSize) : 8192.0;
+	const int maxTileSize = terrainSize > 0 ? static_cast<int>(terrainSize / m_pBakerSettings->cellSize) : 8192.0;
+
+	m_pCellSizeSpinBox->setDecimals(2);
+	m_pCellSizeSpinBox->setSingleStep(0.5);
 	m_pCellSizeSpinBox->setRange(0.1, maxCellSize);
 	m_pCellSizeSpinBox->setValue(m_pBakerSettings->cellSize);
+
+	m_pTileSizeSpinBox->setMinimum(1);
+	m_pTileSizeSpinBox->setMaximum(maxTileSize);
+	m_pTileSizeSpinBox->setValue(m_pBakerSettings->tileSize);
 
 	m_pSensetivitySpinBox->setMinimum(0);
 	m_pSensetivitySpinBox->setMaximum(255);
@@ -88,6 +95,7 @@ void CJDKLevelMapsEditor::SetupWidget(QWidget* pWidget)
 
 	QFormLayout* pForm = new QFormLayout();
 	pForm->addRow(tr("Cell Size"), m_pCellSizeSpinBox);
+	pForm->addRow(tr("Tile Size"), m_pTileSizeSpinBox);
 	pForm->addRow(tr("Sensetivity"), m_pSensetivitySpinBox);
 	pForm->addRow(tr("Enable Grass Layer"), m_pGrassCheckBox);
 	pForm->addRow(tr("Enable Bush Layer"), m_pBushCheckBox);
@@ -109,6 +117,14 @@ void CJDKLevelMapsEditor::SetupConnections()
 
 	connect(m_pCellSizeSpinBox, qOverload<double>(&QDoubleSpinBox::valueChanged), this, [this](double value) {
 		m_pBakerSettings->cellSize = static_cast<float>(value);
+		const int terrainSize = JDKLevelMaps::Baking::GetLevelTerrainSize();
+		const int maxTileSize = static_cast<int>(terrainSize / m_pBakerSettings->cellSize);
+		m_pTileSizeSpinBox->setMaximum(maxTileSize);
+		SaveSettings();
+	});
+
+	connect(m_pTileSizeSpinBox, qOverload<int>(&QSpinBox::valueChanged), this, [this](int value) {
+		m_pBakerSettings->tileSize = static_cast<uint16>(value);
 		SaveSettings();
 	});
 
@@ -180,6 +196,7 @@ const char* CJDKLevelMapsEditor::GetEditorName() const { return "JDK Level Maps"
 void CJDKLevelMapsEditor::SaveSettings()
 {
 	SetProjectProperty("JDKLevelMaps/CellSize", m_pBakerSettings->cellSize);
+	SetProjectProperty("JDKLevelMaps/TileSize", m_pBakerSettings->tileSize);
 	SaveVegetationSettings(m_pBakerSettings->vegSettings);
 }
 
@@ -196,10 +213,17 @@ void CJDKLevelMapsEditor::SaveVegetationSettings(const JDKLevelMaps::Settings::S
 
 void CJDKLevelMapsEditor::LoadSettings()
 {
-	m_pBakerSettings->cellSize = JDKLevelMaps::Utils::ConvertUtils::QVariantToFloat(GetProjectProperty("JDKLevelMaps/CellSize"), m_pBakerSettings->cellSize);
-	const float maxCellSize = static_cast<float>(JDKLevelMaps::Baking::GetLevelTerrainSize());
+	int terrainSize = JDKLevelMaps::Baking::GetLevelTerrainSize();
+
+	const float loadedCellSize = JDKLevelMaps::Utils::ConvertUtils::QVariantToFloat(GetProjectProperty("JDKLevelMaps/CellSize"), m_pBakerSettings->cellSize);
+	const float maxCellSize = static_cast<float>(terrainSize);
 	if (maxCellSize > 0.0f)
-		m_pBakerSettings->cellSize = std::clamp(m_pBakerSettings->cellSize, 0.1f, maxCellSize);
+		m_pBakerSettings->cellSize = std::clamp(loadedCellSize, 0.1f, maxCellSize);
+
+	const uint32 loadedTileSize = JDKLevelMaps::Utils::ConvertUtils::QVariantToUint32(GetProjectProperty("JDKLevelMaps/TileSize"), m_pBakerSettings->tileSize);
+	const uint32 maxTileSize = static_cast<uint32>(terrainSize / m_pBakerSettings->cellSize);
+	if (maxTileSize >= 1)
+		m_pBakerSettings->tileSize = std::clamp(loadedTileSize, static_cast<uint32>(1), maxTileSize);
 
 	LoadVegetationSettings(m_pBakerSettings->vegSettings);
 }
