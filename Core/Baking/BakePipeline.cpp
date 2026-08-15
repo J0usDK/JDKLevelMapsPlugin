@@ -7,6 +7,32 @@
 #include "BakeRunResult.h"
 #include "DebugPngExporter.h"
 #include "../FileSystem/PathResolver.h"
+#include "../LFS/LFSFacade.h"
+
+namespace
+{
+	struct ScopedCryFile
+	{
+		FILE* p = nullptr;
+		
+		ScopedCryFile(FILE* pFile) : p(pFile) {}
+		~ScopedCryFile() { close(); }
+
+		ScopedCryFile(const ScopedCryFile&) = delete;
+		ScopedCryFile& operator=(const ScopedCryFile&) = delete;
+
+		operator FILE* () const { return p; }
+
+		void close()
+		{
+			if (p)
+			{
+				gEnv->pCryPak->FClose(p);
+				p = nullptr;
+			}
+		}
+	};
+}
 
 JDKLevelMaps::Baking::CBakePipeline::CBakePipeline(FileSystem::CPathResolver* pPathResolver)
 {
@@ -15,7 +41,31 @@ JDKLevelMaps::Baking::CBakePipeline::CBakePipeline(FileSystem::CPathResolver* pP
 
 JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::BakeMap(IMapBaker& pBaker, const SBakeContext& context)
 {
-	std::vector<uint8> bakedData = pBaker.Bake(context);
+	const uint32 numChannels = pBaker.GetChannelCount();
+	const uint32 tileCountX = (static_cast<uint32>(context.gridWidth) + context.tileSize - 1) / context.tileSize;
+	const uint32 tileCountY = (static_cast<uint32>(context.gridHeight) + context.tileSize - 1) / context.tileSize;
+	const uint64 totalTiles = static_cast<uint64>(tileCountX) * tileCountY;
+
+	const uint64 headerSize = sizeof(SMapHeader);
+	const uint64 directorySize = totalTiles * sizeof(STileEntry);
+	const uint64 maxTileDataSize = totalTiles * static_cast<uint64>(context.tileSize) * context.tileSize * numChannels;
+
+	const uint64 totalSize = headerSize + directorySize + maxTileDataSize;
+	if (totalSize > FileSystem::CLFSFacade::GetMaxFileSize())
+	{
+		return { false, "The size of map will exceed max file's size" };
+	}
+
+	std::vector<uint8> bakedData;
+	try
+	{
+		bakedData = pBaker.Bake(context);
+	}
+	catch (const std::bad_alloc&)
+	{
+		return { false, "[JDKLevelMaps] Out of Memory: Failed to allocate memory for the map." };
+	}
+
 	std::string path;
 
 	if (auto resultPath = m_pPathResolver->GetMapPath(pBaker.GetId()))
@@ -44,16 +94,16 @@ JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::WriteT
 {
 	SBakeRunResult result;
 	const uint32 numChannels = pBaker.GetChannelCount();
-	const uint32 tileCountX = (context.gridWidth + context.tileSize - 1) / context.tileSize;
-	const uint32 tileCountY = (context.gridHeight + context.tileSize - 1) / context.tileSize;
+	const uint32 tileCountX = (static_cast<uint32>(context.gridWidth) + context.tileSize - 1) / context.tileSize;
+	const uint32 tileCountY = (static_cast<uint32>(context.gridHeight) + context.tileSize - 1) / context.tileSize;
 
-	auto pFile = gEnv->pCryPak->FOpen(path, "wb");
+	ScopedCryFile pFile(gEnv->pCryPak->FOpen(path, "wb"));
 	if (!pFile)
 		return { false, "[JDKLevelMaps] Disk I/O Error: Cannot open map file for writting" };
 
 	auto HandleIOError = [&pFile, &path, &result](const std::string& errorMsg) -> SBakeRunResult
 	{
-		gEnv->pCryPak->FClose(pFile);
+		pFile.close();
 		gEnv->pCryPak->RemoveFile(path);
 		result.success = false;
 		result.message = errorMsg;
@@ -74,7 +124,18 @@ JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::WriteT
 	if (gEnv->pCryPak->FWrite(&header, sizeof(SMapHeader), 1, pFile) != 1)
 		return HandleIOError("[JDKLevelMaps] Disk I/O Error: Cannot write map's header");
 
-	std::vector<STileEntry> directory(tileCountX * tileCountY);
+	size_t totalTiles = static_cast<size_t>(tileCountX) * tileCountY;
+	std::vector<STileEntry> directory;
+
+	try
+	{
+		directory.resize(totalTiles);
+	}
+	catch (const std::bad_alloc&)
+	{
+		return HandleIOError("[JDKLevelMaps] Out of Memory: Failed to allocate memory for the tile directory metadata");
+	}
+
 	size_t directoryOffset = gEnv->pCryPak->FTell(pFile);
 
 	if (gEnv->pCryPak->FWrite(directory.data(), sizeof(STileEntry), directory.size(), pFile) != directory.size())
@@ -84,21 +145,28 @@ JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::WriteT
 	{
 		for (uint32 tx = 0; tx < tileCountX; ++tx)
 		{
-			uint32 tileIndex = ty * tileCountX + tx;
-			std::vector<uint8> tileBuffer(context.tileSize * context.tileSize * numChannels);
-
-			bool isEmpty = ExtractTileData(bakedData, tx, ty, context, numChannels, tileBuffer);
-			if (!isEmpty)
+			size_t tileIndex = static_cast<size_t>(ty) * tileCountX + tx;
+			try
 			{
-				directory[tileIndex].fileOffset = gEnv->pCryPak->FTell(pFile);
-				directory[tileIndex].byteSize = tileBuffer.size();
-				directory[tileIndex].flags = 0;
+				std::vector<uint8> tileBuffer(static_cast<size_t>(context.tileSize) * context.tileSize * numChannels);
 
-				if (gEnv->pCryPak->FWrite(tileBuffer.data(), 1, tileBuffer.size(), pFile) != tileBuffer.size())
-					return HandleIOError("[JDKLevelMaps] Disk I/O Error: Failed to write tile data at index: " + std::to_string(tileIndex));
+				bool isEmpty = ExtractTileData(bakedData, tx, ty, context, numChannels, tileBuffer);
+				if (!isEmpty)
+				{
+					directory[tileIndex].fileOffset = gEnv->pCryPak->FTell(pFile);
+					directory[tileIndex].byteSize = static_cast<uint64>(tileBuffer.size());
+					directory[tileIndex].flags = 0;
+
+					if (gEnv->pCryPak->FWrite(tileBuffer.data(), 1, tileBuffer.size(), pFile) != tileBuffer.size())
+						return HandleIOError("[JDKLevelMaps] Disk I/O Error: Failed to write tile data at index: " + std::to_string(tileIndex));
+				}
+				else
+					directory[tileIndex] = { 0, 0, 1 };
 			}
-			else
-				directory[tileIndex] = { 0, 0, 1 };
+			catch (const std::bad_alloc&)
+			{
+				return HandleIOError("[JDKLevelMaps] Out of Memory: Failed to allocate memory for tile buffer during file writing.");
+			}
 		}
 	}
 
@@ -107,8 +175,7 @@ JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::WriteT
 	if (gEnv->pCryPak->FWrite(directory.data(), sizeof(STileEntry), directory.size(), pFile) != directory.size())
 		return HandleIOError("[JDKLevelMaps] Disk I/O Error: Cannot finilize directory metadata");
 
-	gEnv->pCryPak->FClose(pFile);
-
+	pFile.close();
 	return { true, "Saved to " + std::string(path) };
 }
 
@@ -129,8 +196,8 @@ bool JDKLevelMaps::Baking::CBakePipeline::ExtractTileData(
 		{
 			uint32 globalX = (tileX * context.tileSize) + lx;
 			uint32 globalY = (tileY * context.tileSize) + ly;
-			uint32 globalIndex = ((globalY * context.gridWidth) + globalX) * numChannels;
-			uint32 localIndex = ((ly * context.tileSize) + lx) * numChannels;
+			size_t globalIndex = ((static_cast<size_t>(globalY) * context.gridWidth) + globalX) * numChannels;
+			size_t localIndex = ((static_cast<size_t>(ly) * context.tileSize) + lx) * numChannels;
 
 			for (uint32 c = 0; c < numChannels; ++c)
 			{

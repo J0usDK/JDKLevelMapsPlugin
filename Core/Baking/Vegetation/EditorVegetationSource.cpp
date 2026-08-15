@@ -1,13 +1,15 @@
 #include "StdAfx.h"
 #include "EditorVegetationSource.h"
 
+#include "VegetationCategory.h"
+
 #include "IEditorImpl.h"
 #include "Vegetation/VegetationMap.h"
 #include "Vegetation/VegetationObject.h"
 
 namespace JDKLevelMaps::JDKEditorSource
 {
-	std::vector<SVegetationInstanceData> QueryVegetationInstances(float x1, float y1, float x2, float y2)
+	std::vector<SVegetationInstanceData> QueryVegetationInstances(float x1, float y1, float x2, float y2, const Settings::SVegetationBakerSettings* pSettings)
 	{
 		std::vector<SVegetationInstanceData> result;
 
@@ -27,7 +29,11 @@ namespace JDKLevelMaps::JDKEditorSource
 		{
 			if (!pInstance || !pInstance->object)
 				continue;
-			result.emplace_back(pInstance->pos, pInstance->object->GetGroup());
+
+			MapLayers::EVegetationLayers layer = Categories::Vegetation::ClassifyGroup(pInstance->object->GetGroup(), pSettings);
+
+			if (layer != MapLayers::EVegetationLayers::Unknown)
+				result.emplace_back(pInstance->pos, layer);
 		}
 		return result;
 	}

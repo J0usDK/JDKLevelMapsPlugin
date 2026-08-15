@@ -23,7 +23,7 @@ namespace JDKLevelMaps::Utils::ConvertUtils
 		return ret;
 	}
 
-	inline uint32 QVariantToUint32(const QVariant& value, const uint32& defaultValue = 0.0f)
+	inline uint32 QVariantToUint32(const QVariant& value, const uint32& defaultValue = 0)
 	{
 		if (!value.isValid())
 			return defaultValue;
@@ -36,12 +36,12 @@ namespace JDKLevelMaps::Utils::ConvertUtils
 		if (isOk && tempValue <= 4294967295)
 			ret = static_cast<uint32>(tempValue);
 		else
-			CryWarning(VALIDATOR_MODULE_EDITOR, VALIDATOR_WARNING, "[JDKLevelMaps] Cannot convert value to uint16");
+			CryWarning(VALIDATOR_MODULE_EDITOR, VALIDATOR_WARNING, "[JDKLevelMaps] Cannot convert value to uint32");
 
 		return ret;
 	}
 
-	inline float QVariantToFloat(const QVariant& value, const float& defaultValue = 0)
+	inline float QVariantToFloat(const QVariant& value, const float& defaultValue = 0.0f)
 	{
 		if (!value.isValid())
 			return defaultValue;
@@ -51,7 +51,7 @@ namespace JDKLevelMaps::Utils::ConvertUtils
 
 		float ret = defaultValue;
 
-		if (isOk)
+		if (isOk && !std::isnan(tempValue) && !std::isinf(tempValue))
 			ret = tempValue;
 		else
 			CryWarning(VALIDATOR_MODULE_EDITOR, VALIDATOR_WARNING, "[JDKLevelMaps] Cannot convert value to float");

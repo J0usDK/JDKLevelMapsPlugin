@@ -100,7 +100,7 @@ void JDKLevelMaps::Components::CMapPreview::wheelEvent(QWheelEvent* pEvent)
 	if (pEvent->modifiers() & Qt::ControlModifier)
 	{
 		const float step = pEvent->angleDelta().y() > 0 ? 1.25f : 0.8f;
-		m_zoomFactor = std::clamp(m_zoomFactor * step, 1.0f, 16.0f);
+		m_zoomFactor = std::clamp(m_zoomFactor * step, 1.0f, 64.0f);
 
 		update();
 		pEvent->accept();

@@ -14,6 +14,10 @@ bool JDKLevelMaps::Baking::ExportDebugPng(const char* filePath, const SBakeConte
 		return false;
 	
 	QImage image(header.gridWidth, header.gridHeight, QImage::Format_RGB888);
+	if (image.isNull())
+	{
+		CryWarning(VALIDATOR_MODULE_EDITOR, VALIDATOR_ERROR, "[JDKLevelMaps] Out of Memory: Failed to allocate QImage for debug export.");
+	}
 
 	for (int32 y = 0; y < header.gridHeight; ++y)
 	{

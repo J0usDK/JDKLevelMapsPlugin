@@ -22,8 +22,10 @@ namespace JDKLevelMaps::Baking
 	inline SBakeContext ComputeLevelBakeContext(float cellSize, uint32 tileSize)
 	{
 		CRY_ASSERT(cellSize > 0.0f);
-		if (cellSize <= 0.0f)
-			cellSize = 1.0f;
+		if (cellSize < 0.1f)
+			cellSize = 0.1f;
+		if (tileSize == 0)
+			tileSize = 1;
 
 		int terrainSize = GetLevelTerrainSize();
 		int32 gridSize = static_cast<int32>(terrainSize / cellSize);

@@ -15,12 +15,12 @@ namespace JDKLevelMaps
 	struct STileEntry
 	{
 		uint64 fileOffset = 0;
-		uint32 byteSize = 0;
+		uint64 byteSize = 0;
 		uint32 flags = 0;
 	};
 #pragma pack(pop)
 
-	static_assert(sizeof(STileEntry) == 16,
+	static_assert(sizeof(STileEntry) == 20,
 		"The size of STileEntry has been changed. Keep the in-game reader up to date.");
 
 #pragma pack(push, 1)

@@ -11,31 +11,52 @@ add_sources("NoUberFile"
 )
 
 add_sources("NoUberFile"
+	SOURCE_GROUP "Core"
+)
+
+add_sources("NoUberFile"
+	SOURCE_GROUP "Core\\\\Baking"
+		"Core/Baking/BakeManager.h"
+		"Core/Baking/BakeManager.cpp"
+		"Core/Baking/BakePipeline.h"
+		"Core/Baking/BakePipeline.cpp"
+		"Core/Baking/BakeRunResult.h"
+		"Core/Baking/DebugPngExporter.h"
+		"Core/Baking/DebugPngExporter.cpp"
+		"Core/Baking/IMapBaker.h"
+		"Core/Baking/LevelBakeContext.h"
+)
+
+add_sources("NoUberFile"
+	SOURCE_GROUP "Core\\\\Baking\\\\Vegetation"
+		"Core/Baking/Vegetation/EditorVegetationSource.h"
+		"Core/Baking/Vegetation/EditorVegetationSource.cpp"
+		"Core/Baking/Vegetation/VegetationBaker.h"
+		"Core/Baking/Vegetation/VegetationBaker.cpp"
+		"Core/Baking/Vegetation/VegetationCategory.h"
+)
+
+add_sources("NoUberFile"
+	SOURCE_GROUP "Core\\\\FileSystem"
+		"Core/FileSystem/PathResolver.h"
+		"Core/FileSystem/PathResolver.cpp"
+)
+
+add_sources("NoUberFile"
+	SOURCE_GROUP "Core\\\\LFS"
+		"Core/LFS/LFSFacade.h"
+)
+
+add_sources("NoUberFile"
 	SOURCE_GROUP "Editor"
-		"Editor/Components/MapPreview.h"
-		"Editor/Components/MapPreview.cpp"
 		"Editor/JDKLevelMapsEditor.h"
 		"Editor/JDKLevelMapsEditor.cpp"
 )
 
 add_sources("NoUberFile"
-	SOURCE_GROUP "Core"
-		"Core/Baking/LevelBakeContext.h"
-		"Core/Baking/BakeRunResult.h"
-		"Core/Baking/IMapBaker.h"
-		"Core/Baking/Vegetation/VegetationBaker.h"
-		"Core/Baking/Vegetation/VegetationBaker.cpp"
-		"Core/Baking/Vegetation/EditorVegetationSource.h"
-		"Core/Baking/Vegetation/EditorVegetationSource.cpp"
-		"Core/Baking/Vegetation/VegetationCategory.h"
-		"Core/Baking/BakeManager.h"
-		"Core/Baking/BakeManager.cpp"
-		"Core/Baking/BakePipeline.h"
-		"Core/Baking/BakePipeline.cpp"
-		"Core/Baking/DebugPngExporter.h"
-		"Core/Baking/DebugPngExporter.cpp"
-		"Core/FileSystem/PathResolver.h"
-		"Core/FileSystem/PathResolver.cpp"
+	SOURCE_GROUP "Editor\\\\Components"
+		"Editor/Components/MapPreview.h"
+		"Editor/Components/MapPreview.cpp"
 )
 
 add_sources("NoUberFile"

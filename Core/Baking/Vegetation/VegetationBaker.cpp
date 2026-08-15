@@ -13,30 +13,35 @@ JDKLevelMaps::MapBakers::CVegetationBaker::CVegetationBaker(const Settings::SVeg
 std::vector<uint8> JDKLevelMaps::MapBakers::CVegetationBaker::Bake(const JDKLevelMaps::Baking::SBakeContext& context)
 {
 	const size_t numChannels = GetChannelCount();
-	const int32 totalCells = context.gridWidth * context.gridHeight;
+	const size_t totalCells = static_cast<size_t>(context.gridWidth) * static_cast<size_t>(context.gridHeight);
 	std::vector<uint8> mapData(totalCells * numChannels, 0);
 
 	auto objects = JDKLevelMaps::JDKEditorSource::QueryVegetationInstances(
 		context.originX, context.originY,
 		context.originX + (context.gridWidth * context.cellSize),
-		context.originY + (context.gridHeight * context.cellSize));
+		context.originY + (context.gridHeight * context.cellSize),
+		m_pSettings);
 
 	for (auto object : objects)
 	{
-		const MapLayers::EVegetationLayers group = JDKLevelMaps::Categories::Vegetation::ClassifyGroup(object.group.c_str(), m_pSettings);
+		float relX = (object.pos.x - context.originX) / context.cellSize;
+		float relY = (object.pos.y - context.originY) / context.cellSize;
 
-		Vec3 pos = object.pos;
-		int32 gridX = static_cast<int32>((pos.x - context.originX) / context.cellSize);
-		int32 gridY = static_cast<int32>((pos.y - context.originY) / context.cellSize);
+		if (relX < 0.0f || relX >= static_cast<float>(context.gridWidth) ||
+			relY < 0.0f || relY >= static_cast<float>(context.gridHeight))
+			continue;
+
+		int32 gridX = static_cast<int32>(relX);
+		int32 gridY = static_cast<int32>(relY);
 
 		if (gridX < 0 || gridX >= context.gridWidth || gridY < 0 || gridY >= context.gridHeight)
 			continue;
 
-		int32 channelOffset = ResolveGroup(group);
+		int32 channelOffset = ResolveGroup(object.layer);
 		if (channelOffset < 0)
 			continue;
 
-		int32 index = (((gridY * context.gridWidth) + gridX) * numChannels) + channelOffset;
+		size_t index = ((static_cast<size_t>(gridY) * context.gridWidth + gridX) * numChannels) + channelOffset;
 		mapData[index] = static_cast<uint8>(std::min(mapData[index] + m_pSettings->densityPerInstance, 255));
 	}
 

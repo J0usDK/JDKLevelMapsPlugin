@@ -8,6 +8,7 @@
 #include <QPushButton>
 #include <QFormLayout>
 #include <QVBoxLayout>
+#include <QMessageBox>
 
 #include <Cry3DEngine/I3DEngine.h>
 
@@ -117,14 +118,17 @@ void CJDKLevelMapsEditor::SetupConnections()
 
 	connect(m_pCellSizeSpinBox, qOverload<double>(&QDoubleSpinBox::valueChanged), this, [this](double value) {
 		m_pBakerSettings->cellSize = static_cast<float>(value);
+
 		const int terrainSize = JDKLevelMaps::Baking::GetLevelTerrainSize();
-		const int maxTileSize = static_cast<int>(terrainSize / m_pBakerSettings->cellSize);
+		const double safeTerrainSize = terrainSize > 0 ? static_cast<double>(terrainSize) : 8192.0;
+		const int maxTileSize = std::max(1, static_cast<int>(safeTerrainSize / m_pBakerSettings->cellSize));
+
 		m_pTileSizeSpinBox->setMaximum(maxTileSize);
 		SaveSettings();
 	});
 
 	connect(m_pTileSizeSpinBox, qOverload<int>(&QSpinBox::valueChanged), this, [this](int value) {
-		m_pBakerSettings->tileSize = static_cast<uint16>(value);
+		m_pBakerSettings->tileSize = static_cast<uint32>(value);
 		SaveSettings();
 	});
 
@@ -180,14 +184,18 @@ void CJDKLevelMapsEditor::RefreshPreview(const std::string& imagePath)
 void CJDKLevelMapsEditor::OnGenerateButtonClicked()
 {
 	const JDKLevelMaps::Baking::SBakeRunResult result = m_pBakeManager.get()->RunBake(JDKLevelMaps::EMapType::VegetationDensity);
-	CryLogAlways(result.success ?
-		"[JDKLevelMaps] Vegetation Level Map has been baked successfully" :
-		"[JDKLevelMaps] Vegetation Level Map baking failed with error: %s",
-		result.message.c_str());
-
-	auto currentBaker = m_pBakeManager->GetBaker(JDKLevelMaps::EMapType::VegetationDensity);
-	if (auto path = m_pPathResolver.get()->GetImagePath(currentBaker->GetId()))
-		RefreshPreview(path.value());
+	if (result.success)
+	{
+		CryLogAlways("[JDKLevelMaps] Vegetation Level Map has been baked successfully");
+		auto currentBaker = m_pBakeManager->GetBaker(JDKLevelMaps::EMapType::VegetationDensity);
+		if (auto path = m_pPathResolver.get()->GetImagePath(currentBaker->GetId()))
+			RefreshPreview(path.value());
+	}
+	else
+	{
+		CryWarning(VALIDATOR_MODULE_EDITOR, VALIDATOR_ERROR, "[JDKLevelMaps] Vegetation Level Map baking failed with error: %s", result.message.c_str());
+		QMessageBox::critical(this, tr("Bake Failed"), QString::fromStdString(result.message));
+	}
 }
 
 const char* CJDKLevelMapsEditor::GetEditorName() const { return "JDK Level Maps"; }
@@ -214,16 +222,14 @@ void CJDKLevelMapsEditor::SaveVegetationSettings(const JDKLevelMaps::Settings::S
 void CJDKLevelMapsEditor::LoadSettings()
 {
 	int terrainSize = JDKLevelMaps::Baking::GetLevelTerrainSize();
+	const float maxCellSize = terrainSize > 0 ? static_cast<float>(terrainSize) : 8192.0f;
 
 	const float loadedCellSize = JDKLevelMaps::Utils::ConvertUtils::QVariantToFloat(GetProjectProperty("JDKLevelMaps/CellSize"), m_pBakerSettings->cellSize);
-	const float maxCellSize = static_cast<float>(terrainSize);
-	if (maxCellSize > 0.0f)
-		m_pBakerSettings->cellSize = std::clamp(loadedCellSize, 0.1f, maxCellSize);
+	m_pBakerSettings->cellSize = std::clamp(loadedCellSize, 0.1f, maxCellSize);
 
 	const uint32 loadedTileSize = JDKLevelMaps::Utils::ConvertUtils::QVariantToUint32(GetProjectProperty("JDKLevelMaps/TileSize"), m_pBakerSettings->tileSize);
-	const uint32 maxTileSize = static_cast<uint32>(terrainSize / m_pBakerSettings->cellSize);
-	if (maxTileSize >= 1)
-		m_pBakerSettings->tileSize = std::clamp(loadedTileSize, static_cast<uint32>(1), maxTileSize);
+	const uint32 maxTileSize = std::max(1u, static_cast<uint32>(terrainSize / m_pBakerSettings->cellSize));
+	m_pBakerSettings->tileSize = std::clamp(loadedTileSize, static_cast<uint32>(1), maxTileSize);
 
 	LoadVegetationSettings(m_pBakerSettings->vegSettings);
 }
