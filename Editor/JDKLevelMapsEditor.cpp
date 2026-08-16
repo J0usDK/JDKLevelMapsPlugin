@@ -1,6 +1,8 @@
 #include "StdAfx.h"
 #include "JDKLevelMapsEditor.h"
 
+#include <cmath>
+
 #include <QDoubleSpinBox>
 #include <QSpinBox>
 #include <QCheckBox>
@@ -121,7 +123,7 @@ void CJDKLevelMapsEditor::SetupConnections()
 
 		const int terrainSize = JDKLevelMaps::Baking::GetLevelTerrainSize();
 		const double safeTerrainSize = terrainSize > 0 ? static_cast<double>(terrainSize) : 8192.0;
-		const int maxTileSize = std::max(1, static_cast<int>(safeTerrainSize / m_pBakerSettings->cellSize));
+		const int maxTileSize = std::max(1, static_cast<int>(std::round(safeTerrainSize / m_pBakerSettings->cellSize)));
 
 		m_pTileSizeSpinBox->setMaximum(maxTileSize);
 		SaveSettings();
@@ -228,7 +230,7 @@ void CJDKLevelMapsEditor::LoadSettings()
 	m_pBakerSettings->cellSize = std::clamp(loadedCellSize, 0.1f, maxCellSize);
 
 	const uint32 loadedTileSize = JDKLevelMaps::Utils::ConvertUtils::QVariantToUint32(GetProjectProperty("JDKLevelMaps/TileSize"), m_pBakerSettings->tileSize);
-	const uint32 maxTileSize = std::max(1u, static_cast<uint32>(terrainSize / m_pBakerSettings->cellSize));
+	const uint32 maxTileSize = std::max(1u, static_cast<uint32>(std::round(terrainSize / m_pBakerSettings->cellSize)));
 	m_pBakerSettings->tileSize = std::clamp(loadedTileSize, static_cast<uint32>(1), maxTileSize);
 
 	LoadVegetationSettings(m_pBakerSettings->vegSettings);

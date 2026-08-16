@@ -1,4 +1,5 @@
 #pragma once
+#include <cmath>
 #include <CryCore/BaseTypes.h>
 #include <Cry3DEngine/I3DEngine.h>
 
@@ -28,7 +29,7 @@ namespace JDKLevelMaps::Baking
 			tileSize = 1;
 
 		int terrainSize = GetLevelTerrainSize();
-		int32 gridSize = static_cast<int32>(terrainSize / cellSize);
+		int32 gridSize = static_cast<int32>(std::round(terrainSize / cellSize));
 
 		SBakeContext context;
 		context.cellSize = cellSize;
