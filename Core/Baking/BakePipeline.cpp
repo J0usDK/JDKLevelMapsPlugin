@@ -136,7 +136,7 @@ JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::WriteT
 		return HandleIOError("[JDKLevelMaps] Out of Memory: Failed to allocate memory for the tile directory metadata");
 	}
 
-	size_t directoryOffset = gEnv->pCryPak->FTell(pFile);
+	uint64 directoryOffset = FileSystem::CLFSFacade::FTell(pFile);
 
 	if (gEnv->pCryPak->FWrite(directory.data(), sizeof(STileEntry), directory.size(), pFile) != directory.size())
 		return HandleIOError("[JDKLevelMaps] Disk I/O Error: Cannot reserve directory space (Out of disk space?)");
@@ -153,7 +153,7 @@ JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::WriteT
 				bool isEmpty = ExtractTileData(bakedData, tx, ty, context, numChannels, tileBuffer);
 				if (!isEmpty)
 				{
-					directory[tileIndex].fileOffset = gEnv->pCryPak->FTell(pFile);
+					directory[tileIndex].fileOffset = FileSystem::CLFSFacade::FTell(pFile);
 					directory[tileIndex].byteSize = static_cast<uint64>(tileBuffer.size());
 					directory[tileIndex].flags = 0;
 
@@ -170,7 +170,7 @@ JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::WriteT
 		}
 	}
 
-	gEnv->pCryPak->FSeek(pFile, directoryOffset, SEEK_SET);
+	FileSystem::CLFSFacade::FSeek(pFile, directoryOffset, SEEK_SET);
 
 	if (gEnv->pCryPak->FWrite(directory.data(), sizeof(STileEntry), directory.size(), pFile) != directory.size())
 		return HandleIOError("[JDKLevelMaps] Disk I/O Error: Cannot finilize directory metadata");
