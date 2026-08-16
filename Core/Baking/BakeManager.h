@@ -22,6 +22,7 @@ namespace JDKLevelMaps::Baking
 	class IMapBaker;
 	class CBakePipeline;
 	struct SBakeRunResult;
+	struct SBakeProgress;
 
 	class CBakeManager
 	{
@@ -32,7 +33,7 @@ namespace JDKLevelMaps::Baking
 		std::vector<const IMapBaker*> GetAvaliableBakers() const;
 		const IMapBaker* GetBaker(EMapType bakerType) const;
 
-		SBakeRunResult RunBake(EMapType mapType);
+		SBakeRunResult RunBake(EMapType mapType, std::shared_ptr<SBakeProgress> pProgress = nullptr);
 
 	private:
 		const Settings::SBakerSettings* m_pBakerSettings = nullptr;

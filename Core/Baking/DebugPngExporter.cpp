@@ -4,9 +4,10 @@
 #include <QImage>
 
 #include "LevelBakeContext.h"
+#include "BakeProgress.h"
 #include "IMapBaker.h"
 
-bool JDKLevelMaps::Baking::ExportDebugPng(const char* filePath, const SBakeContext& header, const std::vector<uint8>& data, const IMapBaker& baker)
+bool JDKLevelMaps::Baking::ExportDebugPng(const char* filePath, const SBakeContext& header, const std::vector<uint8>& data, const IMapBaker& baker, std::shared_ptr<SBakeProgress> pProgress)
 {
 	const uint32 channels = baker.GetChannelCount();
 	const size_t expectedSize = header.gridWidth * header.gridHeight * channels;
@@ -21,6 +22,9 @@ bool JDKLevelMaps::Baking::ExportDebugPng(const char* filePath, const SBakeConte
 
 	for (int32 y = 0; y < header.gridHeight; ++y)
 	{
+		if (pProgress && (y & 0xF) == 0)
+			pProgress->imageProgress.store((static_cast<float>(y) / header.gridHeight) * 0.1f);
+
 		uchar* pLine = image.scanLine(y);
 		const uint8* pRowData = data.data() + (y * header.gridWidth * channels);
 
@@ -34,5 +38,10 @@ bool JDKLevelMaps::Baking::ExportDebugPng(const char* filePath, const SBakeConte
 		}
 	}
 
-	return image.save(filePath, "PNG", 100);
+	bool saved = image.save(filePath, "PNG", 100);
+
+	if (pProgress)
+		pProgress->imageProgress.store(1.0f);
+
+	return saved;
 }

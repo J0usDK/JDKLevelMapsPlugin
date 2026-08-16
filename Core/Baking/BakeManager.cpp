@@ -43,7 +43,7 @@ const JDKLevelMaps::Baking::IMapBaker* JDKLevelMaps::Baking::CBakeManager::GetBa
 	return it != m_bakers.end() ? it->get() : nullptr;
 }
 
-JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakeManager::RunBake(EMapType mapType)
+JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakeManager::RunBake(EMapType mapType, std::shared_ptr<SBakeProgress> pProgress)
 {
 	auto it = std::find_if(m_bakers.begin(), m_bakers.end(), [mapType](const auto& pBaker) {
 		return pBaker->GetMapType() == mapType;
@@ -57,5 +57,5 @@ JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakeManager::RunBake
 	}
 
 	SBakeContext context = JDKLevelMaps::Baking::ComputeLevelBakeContext(m_pBakerSettings->cellSize, m_pBakerSettings->tileSize);
-	return m_pBakePipeline->BakeMap(*it->get(), context);
+	return m_pBakePipeline->BakeMap(*it->get(), context, pProgress);
 }

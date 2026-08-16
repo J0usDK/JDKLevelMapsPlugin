@@ -1,4 +1,6 @@
 #pragma once
+#include <thread>
+
 #include <EditorFramework/Editor.h>
 
 class QDoubleSpinBox;
@@ -6,6 +8,7 @@ class QSpinBox;
 class QCheckBox;
 class QLineEdit;
 class QPushButton;
+class QProgressBar;
 
 namespace JDKLevelMaps::Components
 {
@@ -32,7 +35,7 @@ class CJDKLevelMapsEditor final : public CDockableEditor, public IAutoEditorNoti
 {
 public:
 	CJDKLevelMapsEditor(QWidget* pParent = nullptr);
-	~CJDKLevelMapsEditor() = default;
+	~CJDKLevelMapsEditor();
 
 	void OnEditorNotifyEvent(EEditorNotifyEvent event) override;
 
@@ -64,8 +67,11 @@ private:
 	QLineEdit* m_pTreeLineEdit = nullptr;
 	QPushButton* m_pGenerateButton = nullptr;
 	JDKLevelMaps::Components::CMapPreview* m_pMapPreview = nullptr;
+	QProgressBar* m_pProgressBar = nullptr;
 
 	std::unique_ptr<JDKLevelMaps::Settings::SBakerSettings> m_pBakerSettings = nullptr;
 	std::unique_ptr<JDKLevelMaps::FileSystem::CPathResolver> m_pPathResolver = nullptr;
 	std::unique_ptr<JDKLevelMaps::Baking::CBakeManager> m_pBakeManager = nullptr;
+
+	std::thread m_bakeThread;
 };

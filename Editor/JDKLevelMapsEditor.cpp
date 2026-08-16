@@ -11,6 +11,7 @@
 #include <QFormLayout>
 #include <QVBoxLayout>
 #include <QMessageBox>
+#include <QProgressBar>
 
 #include <Cry3DEngine/I3DEngine.h>
 
@@ -20,6 +21,7 @@
 #include "../Core/Baking/BakeManager.h"
 #include "../Core/Baking/BakeRunResult.h"
 #include "../Core/Baking/LevelBakeContext.h"
+#include "../Core/Baking/BakeProgress.h"
 #include "../Core/FileSystem/PathResolver.h"
 #include "Shared/MapHeader.h"
 
@@ -41,6 +43,15 @@ CJDKLevelMapsEditor::CJDKLevelMapsEditor(QWidget* pParent) : CDockableEditor(pPa
 	auto currentBaker = m_pBakeManager->GetBaker(JDKLevelMaps::EMapType::VegetationDensity);
 	if (auto path = m_pPathResolver.get()->GetImagePath(currentBaker->GetId()))
 		RefreshPreview(path.value());
+}
+
+CJDKLevelMapsEditor::~CJDKLevelMapsEditor()
+{
+	if (m_bakeThread.joinable())
+	{
+		CryLogAlways("[JDKLevelMaps] Editor closed. Waiting for background baking thread to finish securely...");
+		m_bakeThread.join();
+	}
 }
 
 void CJDKLevelMapsEditor::OnEditorNotifyEvent(EEditorNotifyEvent event)
@@ -70,6 +81,7 @@ void CJDKLevelMapsEditor::SetupWidget(QWidget* pWidget)
 	m_pBushLineEdit = new QLineEdit(pWidget);
 	m_pTreeLineEdit = new QLineEdit(pWidget);
 	m_pGenerateButton = new QPushButton(tr("Generate"), pWidget);
+	m_pProgressBar = new QProgressBar(pWidget);
 
 	const int terrainSize = JDKLevelMaps::Baking::GetLevelTerrainSize();
 	const double maxCellSize = terrainSize > 0 ? static_cast<double>(terrainSize) : 8192.0;
@@ -111,6 +123,7 @@ void CJDKLevelMapsEditor::SetupWidget(QWidget* pWidget)
 	pLayout->addWidget(m_pMapPreview, 1);
 	pLayout->addLayout(pForm);
 	pLayout->addWidget(m_pGenerateButton);
+	pLayout->addWidget(m_pProgressBar);
 	pLayout->addStretch();
 }
 
@@ -185,20 +198,51 @@ void CJDKLevelMapsEditor::RefreshPreview(const std::string& imagePath)
 
 void CJDKLevelMapsEditor::OnGenerateButtonClicked()
 {
-	const JDKLevelMaps::Baking::SBakeRunResult result = m_pBakeManager.get()->RunBake(JDKLevelMaps::EMapType::VegetationDensity);
-	if (result.success)
-	{
-		CryLogAlways("[JDKLevelMaps] Vegetation Level Map has been baked successfully");
-		auto currentBaker = m_pBakeManager->GetBaker(JDKLevelMaps::EMapType::VegetationDensity);
+	m_pGenerateButton->setEnabled(false);
+	m_pProgressBar->setValue(0);
 
-		if (auto path = m_pPathResolver.get()->GetImagePath(currentBaker->GetId()))
-			RefreshPreview(path.value());
-	}
-	else
+	if (m_bakeThread.joinable())
+		m_bakeThread.join();
+
+	auto pProgress = std::make_shared<JDKLevelMaps::Baking::SBakeProgress>();
+
+	QTimer* pTimer = new QTimer(this);
+	connect(pTimer, &QTimer::timeout, this, [this, pProgress, pTimer]()
 	{
-		CryWarning(VALIDATOR_MODULE_EDITOR, VALIDATOR_ERROR, "[JDKLevelMaps] Vegetation Level Map baking failed with error: %s", result.message.c_str());
-		QMessageBox::critical(this, tr("Bake Failed"), QString::fromStdString(result.message));
-	}
+		int percent = static_cast<int>((pProgress->writeProgress.load() + pProgress->imageProgress.load()) / 2.0f * 100.0f);
+		m_pProgressBar->setValue(percent);
+
+		if (pProgress->isCompleted.load())
+		{
+			m_pProgressBar->setValue(100);
+			pTimer->stop();
+			pTimer->deleteLater();
+
+			m_pGenerateButton->setEnabled(true);
+			if (pProgress->isSuccess.load())
+			{
+				CryLogAlways("[JDKLevelMaps] Vegetation Level Map has been baked successfully");
+				auto currentBaker = m_pBakeManager->GetBaker(JDKLevelMaps::EMapType::VegetationDensity);
+				if (auto path = m_pPathResolver.get()->GetImagePath(currentBaker->GetId()))
+					RefreshPreview(path.value());
+			}
+			else
+			{
+				CryWarning(VALIDATOR_MODULE_EDITOR, VALIDATOR_ERROR, "[JDKLevelMaps] Vegetation Level Map baking failed with error: %s", pProgress->resultMessage.c_str());
+				QMessageBox::critical(this, tr("Bake Failed"), QString::fromStdString(pProgress->resultMessage));
+			}
+		}
+	});
+
+	pTimer->start(33);
+	m_bakeThread = std::thread([this, pProgress]()
+	{
+		JDKLevelMaps::Baking::SBakeRunResult result = m_pBakeManager->RunBake(JDKLevelMaps::EMapType::VegetationDensity, pProgress);
+
+		pProgress->resultMessage = result.message;
+		pProgress->isSuccess.store(result.success);
+		pProgress->isCompleted.store(true);
+	});
 }
 
 const char* CJDKLevelMapsEditor::GetEditorName() const { return "JDK Level Maps"; }

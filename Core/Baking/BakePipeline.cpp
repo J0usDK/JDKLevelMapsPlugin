@@ -1,9 +1,12 @@
 #include "StdAfx.h"
 #include "BakePipeline.h"
 
+#include <future>
+
 #include "IMapBaker.h"
 #include "LevelBakeContext.h"
 
+#include "BakeProgress.h"
 #include "BakeRunResult.h"
 #include "DebugPngExporter.h"
 #include "../FileSystem/PathResolver.h"
@@ -77,8 +80,12 @@ namespace
 		uint32 numChannels,
 		uint32 tileCountX,
 		uint32 tileCountY,
-		const std::vector<uint8>& tileHasData)
+		const std::vector<uint8>& tileHasData,
+		std::shared_ptr<JDKLevelMaps::Baking::SBakeProgress> pProgress)
 	{
+		if (pProgress)
+			pProgress->currentStage.store(JDKLevelMaps::Baking::EBakeStage::WritingTiles);
+
 		JDKLevelMaps::Baking::SBakeRunResult result;
 		auto HandleIOError = [&pFile, path, &result](const std::string& errorMsg) -> JDKLevelMaps::Baking::SBakeRunResult
 		{
@@ -123,6 +130,9 @@ namespace
 
 		for (size_t tileIndex = 0; tileIndex < totalTiles; ++tileIndex)
 		{
+			if (pProgress && (tileIndex & 0xFF) == 0)
+				pProgress->writeProgress.store(0.2f + (static_cast<float>(tileIndex) / totalTiles) * 0.6f);
+
 			if (tileHasData[tileIndex])
 			{
 				std::fill(tileBuffer.begin(), tileBuffer.end(), 0);
@@ -149,11 +159,34 @@ namespace
 			}
 		}
 
+		if (pProgress)
+			pProgress->writeProgress.store(1.0f);
+
 		JDKLevelMaps::FileSystem::CLFSFacade::FSeek(pFile, directoryOffset, SEEK_SET);
-		if (gEnv->pCryPak->FWrite(directory.data(), sizeof(TTileEntry), directory.size(), pFile) != directory.size())
-			return HandleIOError("[JDKLevelMaps] Disk I/O Error: Cannot finilize directory metadata");
+
+		const size_t chunkSize = (1024 * 1024) / sizeof(TTileEntry);
+		size_t totalWritten = 0;
+		const size_t totalElements = directory.size();
+
+		while (totalWritten < totalElements)
+		{
+			size_t elementsToWrite = std::min(chunkSize, totalElements - totalWritten);
+			if (gEnv->pCryPak->FWrite(directory.data() + totalWritten, sizeof(TTileEntry), elementsToWrite, pFile) != elementsToWrite)
+				return HandleIOError("[JDKLevelMaps] Disk I/O Error: Cannot finilize directory metadata");
+
+			totalWritten += elementsToWrite;
+			if (pProgress)
+			{
+				float flushProgress = static_cast<float>(totalWritten) / totalElements;
+				pProgress->writeProgress.store(0.8f + (flushProgress * 0.2f));
+			}
+		}
 
 		pFile.close();
+
+		if (pProgress)
+			pProgress->writeProgress.store(1.0f);
+
 		return { true, "Saved to " + std::string(path) };
 	}
 }
@@ -163,7 +196,7 @@ JDKLevelMaps::Baking::CBakePipeline::CBakePipeline(FileSystem::CPathResolver* pP
 	m_pPathResolver = pPathResolver;
 }
 
-JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::BakeMap(IMapBaker& pBaker, const SBakeContext& context)
+JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::BakeMap(IMapBaker& pBaker, const SBakeContext& context, std::shared_ptr<SBakeProgress> pProgress)
 {
 	const uint32 numChannels = pBaker.GetChannelCount();
 	const uint32 tileCountX = (static_cast<uint32>(context.gridWidth) + context.tileSize - 1) / context.tileSize;
@@ -181,6 +214,8 @@ JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::BakeMa
 	std::vector<uint8> bakedData;
 	try
 	{
+		if (pProgress)
+			pProgress->currentStage.store(EBakeStage::ExtractingData);
 		bakedData = pBaker.Bake(context);
 	}
 	catch (const std::bad_alloc&)
@@ -188,23 +223,33 @@ JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::BakeMa
 		return { false, "[JDKLevelMaps] Out of Memory: Failed to allocate memory for the map." };
 	}
 
-	std::string path;
-
+	std::string mapPath;
 	if (auto resultPath = m_pPathResolver->GetMapPath(pBaker.GetId()))
-		path = resultPath.value();
+		mapPath = resultPath.value();
 	else
 		return { false, "[JDKLevelMaps] Disk I/O Error: Cannot get map's path" };
 
-
-	SBakeRunResult mapResult = WriteToFile(pBaker, context, path.c_str(), bakedData);
-	if (!mapResult.success)
-		return mapResult;
+	std::string imagePath;
 	if (auto resultPath = m_pPathResolver->GetImagePath(pBaker.GetId()))
-		path = resultPath.value();
+		imagePath = resultPath.value();
 	else
 		return { false, "[JDKLevelMaps] Disk I/O Error: Cannot get image's path" };
 
-	bool imageResult = ExportDebugPng(path.c_str(), context, bakedData, pBaker);
+	std::future<SBakeRunResult> writeTask = std::async(std::launch::async, [&]()
+	{
+		return WriteToFile(pBaker, context, mapPath.c_str(), bakedData, pProgress);
+	});
+
+	std::future<bool> imageTask = std::async(std::launch::async, [&]()
+	{
+		return ExportDebugPng(imagePath.c_str(), context, bakedData, pBaker, pProgress);
+	});
+
+
+	SBakeRunResult mapResult = writeTask.get();
+	bool imageResult = imageTask.get();
+	if (!mapResult.success)
+		return mapResult;
 	return { imageResult, imageResult ? "" : "[JDKLevelMaps] Disk I/O Error: Error during saving debug image" };
 }
 
@@ -212,12 +257,16 @@ JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::WriteT
 	const IMapBaker& pBaker,
 	const SBakeContext& context,
 	const char* path,
-	const std::vector<uint8>& bakedData) const
+	const std::vector<uint8>& bakedData,
+	std::shared_ptr<SBakeProgress> pProgress) const
 {
 	const uint32 numChannels = pBaker.GetChannelCount();
 	const uint32 tileCountX = (static_cast<uint32>(context.gridWidth) + context.tileSize - 1) / context.tileSize;
 	const uint32 tileCountY = (static_cast<uint32>(context.gridHeight) + context.tileSize - 1) / context.tileSize;
 	const uint64 totalTiles = static_cast<uint64>(tileCountX) * tileCountY;
+
+	if (pProgress)
+		pProgress->currentStage.store(EBakeStage::PrePassAnalysis);
 
 	std::vector<uint8> tileHasData(totalTiles, 0);
 	uint64 nonEmptyTileCount = 0;
@@ -225,6 +274,9 @@ JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::WriteT
 	// Pre pass to compute real file size
 	for (int32 y = 0; y < context.gridHeight; ++y)
 	{
+		if (pProgress)
+			pProgress->writeProgress.store((static_cast<float>(y) / context.gridHeight) * 0.2f);
+
 		uint32 ty = y / context.tileSize;
 		size_t rowTileOffset = static_cast<size_t>(ty) * tileCountX;
 		size_t globalRowIndex = static_cast<size_t>(y) * context.gridWidth * numChannels;
@@ -273,7 +325,7 @@ JDKLevelMaps::Baking::SBakeRunResult JDKLevelMaps::Baking::CBakePipeline::WriteT
 		return { false, "[JDKLevelMaps] Disk I/O Error: Cannot open map file for writting" };
 
 	if (useCompact)
-		return WriteTiles<STileEntry32>(pFile, path, header, context, bakedData, numChannels, tileCountX, tileCountY, tileHasData);
+		return WriteTiles<STileEntry32>(pFile, path, header, context, bakedData, numChannels, tileCountX, tileCountY, tileHasData, pProgress);
 	else
-		return WriteTiles<STileEntry64>(pFile, path, header, context, bakedData, numChannels, tileCountX, tileCountY, tileHasData);
+		return WriteTiles<STileEntry64>(pFile, path, header, context, bakedData, numChannels, tileCountX, tileCountY, tileHasData, pProgress);
 }
