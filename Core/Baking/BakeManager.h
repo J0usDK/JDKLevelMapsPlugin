@@ -4,7 +4,7 @@
 
 namespace JDKLevelMaps
 {
-	enum class EMapType : uint16;
+	enum class EMapType : uint8;
 }
 
 namespace JDKLevelMaps::Settings

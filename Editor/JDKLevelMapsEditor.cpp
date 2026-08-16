@@ -190,6 +190,7 @@ void CJDKLevelMapsEditor::OnGenerateButtonClicked()
 	{
 		CryLogAlways("[JDKLevelMaps] Vegetation Level Map has been baked successfully");
 		auto currentBaker = m_pBakeManager->GetBaker(JDKLevelMaps::EMapType::VegetationDensity);
+
 		if (auto path = m_pPathResolver.get()->GetImagePath(currentBaker->GetId()))
 			RefreshPreview(path.value());
 	}
